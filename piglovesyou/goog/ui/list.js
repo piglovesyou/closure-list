@@ -10,6 +10,7 @@
 goog.provide('goog.ui.List');
 goog.provide('goog.ui.List.Item');
 goog.provide('goog.ui.List.Item.Renderer');
+goog.provide('goog.ui.List.Model');
 
 goog.require('goog.Uri');
 goog.require('goog.array');
@@ -96,24 +97,35 @@ goog.ui.List.prototype.canDecorate = function(element) {
 goog.ui.List.prototype.enterDocument = function() {
   goog.base(this, 'enterDocument');
   this.updateHeightCache();
-  var eh = this.getHandler();
-  // eh.listen(this.model,
-  //     goog.ui.List.Model.EventType.RECORDS_READY, this.handleRecordsReady);
+  this.fillViewport();
 };
 
 
 goog.ui.List.prototype.fillViewport = function() {
-
+  var scrollTop = this.getContentElement().scrollTop;
+  if (scrollTop === 0) {
+    var r = this.model.getResult(0);
+    r.wait(goog.bind(this.handleDataReady, this));
+  }
 };
 
 
-goog.ui.List.prototype.handleRecordsReady = function(e) {
-  this.renderItems(e.offset, e.size, e.item);
+goog.ui.List.prototype.handleDataReady = function(r) {
+  // var a = this.model.getTotal();
+  // console.log(a, r.getValue());
+  this.renderItems(r.getValue());
+};
+
+goog.ui.List.prototype.adjustContentPadding = function() {
 };
 
 
-goog.ui.List.prototype.renderItems = function(offset, size, itemNodes) {
-
+goog.ui.List.prototype.renderItems = function(items) {
+  var dh = this.getDomHelper();
+  goog.array.forEach(items, function(node) {
+    var i = new this.ItemType(node, dh);
+    this.addChild(i, true);
+  }, this);
 };
 
 
@@ -133,18 +145,36 @@ goog.ui.List.prototype.disposeInternal = function() {
 
 /**
  * @constructor
+ * @param {FastDataNode} node .
  * @param {goog.dom.DomHelper=} opt_domHelper .
  * @extends {goog.ui.Component}
  */
-goog.ui.List.Item = function(opt_domHelper) {
+goog.ui.List.Item = function(node, opt_domHelper) {
   goog.base(this, opt_domHelper);
+  this.node = node;
 };
 goog.inherits(goog.ui.List.Item, goog.ui.Component);
 
 
 /** @inheritDoc */
 goog.ui.List.Item.prototype.createDom = function() {
-  goog.base(this, 'createDom');
+  var dh = this.getDomHelper();
+  var el = dh.createDom('div', 'my-list-item',
+      this.createContent());
+  this.setElementInternal(el);
+};
+
+
+/**
+ * @return {Node} .
+ */
+goog.ui.List.Item.prototype.createContent = function() {
+  var dh = this.getDomHelper();
+  var fragment = dh.getDocument().createDocumentFragment();
+  dh.append(fragment,
+      dh.createDom('div', null, this.node.title),
+      dh.createDom('div', null, this.node.body));
+  return fragment;
 };
 
 
@@ -207,6 +237,8 @@ goog.ui.List.Item.Renderer.prototype.createContent = function(component, parentN
 goog.ui.List.Model = function(size) {
   this.id = 'list:' + goog.getUid(this);
 
+  // We use FastDataNode so that a soy function
+  // can accept the node as the same as an object.
   this.rootNode = new goog.ds.FastDataNode({
     total: -1,
     items: []
@@ -216,35 +248,47 @@ goog.ui.List.Model = function(size) {
 
   dm.addDataSource(this.rootNode);
 
+  // TODO: Be optional.
   this.xm = new goog.net.XhrManager();
 
   this.perPage = 10;
 
-  var me = this;
-  var r = me.get(2);
-  r.wait(function(r) {
-    console.log(r.getValue());
-  });
-  setTimeout(function() {
-    var r2 = me.get(2);
-    r2.wait(function(r) {
-      console.log(r2.getValue());
-    });
-  }, 2000);
+  // For devel.
+  // var me = this;
+  // var r = me.get(2);
+  // r.wait(function(r) {
+  //   console.log(r.getValue());
+  // });
+  // setTimeout(function() {
+  //   var r2 = me.get(2);
+  //   r2.wait(function(r) {
+  //     console.log(r2.getValue());
+  //   });
+  // }, 2000);
 };
 goog.inherits(goog.ui.List.Model, goog.events.EventTarget);
 
 /**
+ * We should cache a page instance because we should cache height
+ * of items in a page.
  * @param {number} pageIndex .
  * @return {goog.result.SimpleResult} .
  */
-goog.ui.List.Model.prototype.get = function(pageIndex) {
+goog.ui.List.Model.prototype.getResult = function(pageIndex) {
   var page = this.pages[pageIndex];
   if (!page) {
-    page = new goog.ui.List.Model.Page(
+    page = this.pages[pageIndex] = new goog.ui.List.Model.Page(
         this, this.perPage * pageIndex, this.perPage);
   }
   return page.getResult();
+};
+
+goog.ui.List.Model.prototype.getTotal = function() {
+  return this.rootNode.getChildNode('total').get();
+};
+
+goog.ui.List.Model.prototype.getItemsNode = function() {
+  return this.rootNode.getChildNode('items');
 };
 
 /**
@@ -253,11 +297,11 @@ goog.ui.List.Model.prototype.get = function(pageIndex) {
  * @return {Array.<Object>} Node set of array.
  */
 goog.ui.List.Model.prototype.saveItems = function(newItems, from) {
-  var itemsNode = this.rootNode.getChildNode('items');
+  var itemsNode = this.getItemsNode();
   var i = 0;
   var items = [];
   goog.iter.forEach(goog.iter.range(from, from + this.perPage), function(n) {
-    var name = 'item:' + n, newItem
+    var name = 'item:' + n, newItem;
     var newItem = newItems[i++];
     itemsNode.setChildNode(name, newItem);
     items.push(itemsNode.getChildNode(name));
@@ -327,8 +371,9 @@ goog.ui.List.Model.Page.prototype.getResult = function() {
  */
 goog.ui.List.Model.Page.prototype.collectLocal_ = function() {
   var items = [];
-  if (goog.iter.every(goog.iter.range(this.offset, this.offset + this.size), function(i) {
-    var itemNode = this.model.rootNode.getChildNode('items').getChildNode('item:' + i);
+  if (goog.iter.every(
+        goog.iter.range(this.offset, this.offset + this.size), function(i) {
+    var itemNode = this.model.getItemsNode().getChildNode('item:' + i);
     if (itemNode) {
       items.push(itemNode);
       return true;
@@ -368,35 +413,6 @@ goog.ui.List.Model.Page.prototype.createUrl_ = function() {
   });
   return url.toString();
 };
-
-
-
-
-// /**
-//  * I want just .root_ !
-//  *
-//  * @param {goog.ds.DataNode} parent .
-//  * @param {string} dataName .
-//  * @param {goog.ds.DataNode=} opt_parentDataNode .
-//  * @constructor
-//  * @extends {goog.ds.JsPropertyDataSource}
-//  */
-// goog.ui.List.Model.ItemNode = function(parent, dataName, opt_parentDataNode) {
-//   goog.base(this, parent, dataName, opt_parentDataNode);
-// };
-// goog.inherits(goog.ui.List.Model.ItemNode, goog.ds.JsPropertyDataSource);
-//
-// /**
-//  * @return {Object}
-//  */
-// goog.ui.List.Model.ItemNode.provide.get = function() {
-//   return root_;
-// };
-
-
-
-
-
 
 
 }); // goog.scope
