@@ -1,0 +1,64 @@
+<!--
+ * @license
+ * Copyright (c) 2012 Soichi Takamura (http://stakam.net/)
+ *
+ * Dual licensed under the MIT and GPL licenses:
+ *   http://www.opensource.org/licenses/mit-license.php
+ *   http://www.gnu.org/licenses/gpl.html
+ -->
+
+<!DOCTYPE HTML>
+<html>
+<head>
+	<meta charset="UTF-8">
+	<title>goog.ui.Scroller</title>
+  <link rel="stylesheet" href="../css/list.css" />
+
+  <script src="../../../closure-library-read-only/closure/goog/base.js"></script>
+  <script type="text/javascript">
+
+goog.require('goog.Uri');
+goog.require('goog.array');
+goog.require('goog.ds.DataManager');
+goog.require('goog.ds.FastDataNode');
+goog.require('goog.ds.JsDataSource');
+goog.require('goog.iter');
+goog.require('goog.net.XhrManager');
+goog.require('goog.ui.Component');
+
+
+    goog.require('goog.result.DependentResult');
+    goog.require('goog.result.Result');
+    goog.require('goog.result.SimpleResult');
+  </script>
+  <script src="../ui/list.js"></script>
+
+  <style type="text/css">
+    #my-list {
+      width: 300px;
+      height: 350px;
+      border: 2px lightgreen solid;
+      overflow: auto;
+    }
+  </style>
+
+</head>
+<body>
+
+  <h1>goog.ui.List</h1>
+
+  <div id="my-list">
+    <div class="my-list-inner">
+    </div>
+  </div>
+
+
+
+  <script>
+    var model = new goog.ui.List.Model();
+    var list = new goog.ui.List(model)
+    list.decorate(document.getElementById('my-list'));
+  </script>
+
+</body>
+</html>
