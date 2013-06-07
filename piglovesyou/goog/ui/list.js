@@ -12,15 +12,6 @@ goog.provide('goog.ui.List.Item');
 goog.provide('goog.ui.List.Item.Renderer');
 goog.provide('goog.ui.List.Model');
 
-goog.require('goog.Uri');
-goog.require('goog.array');
-goog.require('goog.ds.DataManager');
-goog.require('goog.ds.FastDataNode');
-goog.require('goog.ds.JsDataSource');
-goog.require('goog.iter');
-goog.require('goog.net.XhrManager');
-goog.require('goog.ui.Component');
-
 
 
 
@@ -36,11 +27,12 @@ var dm = goog.ds.DataManager.getInstance();
  * @param {goog.dom.DomHelper=} opt_domHelper .
  * @extends {goog.ui.Component}
  */
-goog.ui.List = function(model, aproxItemHeight, opt_itemType, opt_itemRenderer, opt_domHelper) {
+goog.ui.List = function(model, perPage, itemHeight, opt_itemType, opt_itemRenderer, opt_domHelper) {
   goog.base(this, opt_domHelper);
 
   this.model = model;
-  this.aproxItemHeight = aproxItemHeight;
+  this.perPage = perPage;
+  this.itemHeight = goog.isNumber(itemHeight) ? itemHeight : 48;
 
   this.pages = [];
 
@@ -76,6 +68,13 @@ goog.ui.List.prototype.createDom = function() {
 /** @inheritDoc */
 goog.ui.List.prototype.decorateInternal = function(element) {
   goog.base(this, 'decorateInternal', element);
+  this.clearContent();
+};
+
+
+goog.ui.List.prototype.clearContent = function() {
+  var dh = this.getDomHelper();
+  dh.removeChildren(this.getContentElement());
 };
 
 
@@ -97,36 +96,73 @@ goog.ui.List.prototype.canDecorate = function(element) {
 goog.ui.List.prototype.enterDocument = function() {
   goog.base(this, 'enterDocument');
   this.updateHeightCache();
+  var eh = this.getHandler();
+  var delay = new goog.async.Delay(function() {
+    this.fillViewport();
+  }, 1000, this);
+  eh.listen(this.getElement(), 'scroll', function(e) {
+    delay.start();
+  });
   this.fillViewport();
 };
 
 
 goog.ui.List.prototype.fillViewport = function() {
-  var scrollTop = this.getContentElement().scrollTop;
-  if (scrollTop === 0) {
-    var r = this.model.getResult(0);
-    r.wait(goog.bind(this.handleDataReady, this));
-  }
+  var range = this.calcPageRange();
+
+  var result = this.model.getResult(range.start * this.perPage,
+      range.end * this.perPage);
+  result.wait(goog.bind(function(result) {
+
+    goog.iter.forEach(goog.iter.range(range.start, range.end), function(n) {
+      if (this.pages[n]) return;
+      this.pages[n] = new goog.ui.List.Page(this, result.getValue());
+    }, this);
+
+    // Remove extra pages.
+    goog.array.removeIf(this.pages, function(page, i) {
+      if (i < range.start || range.end <= i) {
+        page.dispose();
+        return true;
+      }
+      return false;
+    })
+
+    this.adjustContentPadding(range);
+
+  }, this));
+};
+
+goog.ui.List.prototype.calcPageRange = function() {
+  var el = this.getElement(),
+      scrollTop = el.scrollTop,
+      viewportHeight = el.offsetHeight,
+      pageHeight = this.itemHeight * this.model.perPage,
+      upperPageIndex = Math.floor(scrollTop / pageHeight),
+      lowerPageIndex = Math.floor((scrollTop + viewportHeight) / pageHeight);
+  return new goog.math.Range(upperPageIndex, lowerPageIndex + 1);
+};
+
+goog.ui.List.prototype.adjustContentPadding = function(range) {
+  var el = this.getContentElement(),
+      total = this.model.getTotal();
+
+  var top = range.start * this.perPage;
+  var bottom = total - range.end * this.perPage;
+  goog.style.setStyle(el, {
+    paddingTop: top * this.itemHeight + 'px',
+    paddingBottom: bottom * this.itemHeight + 'px'
+  });
 };
 
 
-goog.ui.List.prototype.handleDataReady = function(r) {
-  // var a = this.model.getTotal();
-  // console.log(a, r.getValue());
-  this.renderItems(r.getValue());
-};
-
-goog.ui.List.prototype.adjustContentPadding = function() {
-};
-
-
-goog.ui.List.prototype.renderItems = function(items) {
-  var dh = this.getDomHelper();
-  goog.array.forEach(items, function(node) {
-    var i = new this.ItemType(node, dh);
-    this.addChild(i, true);
-  }, this);
-};
+// goog.ui.List.prototype.renderItems = function(items) {
+//   var dh = this.getDomHelper();
+//   goog.array.forEach(items, function(node) {
+//     var i = new this.ItemType(node, dh);
+//     this.addChild(i, true);
+//   }, this);
+// };
 
 
 /** @inheritDoc */
@@ -135,6 +171,41 @@ goog.ui.List.prototype.disposeInternal = function() {
 };
 
 
+
+
+
+
+
+/**
+ * @constructor
+ * @extends {goog.Disposable}
+ */
+goog.ui.List.Page = function(list, records, opt_prepend) {
+  goog.base(this);
+  this.list = list;
+  this.items = [];
+  goog.array.forEach(records, function(node, i) {
+    var item = new list.ItemType(node);
+    if (opt_prepend) {
+      list.addChildAt(item, i, true);
+    } else {
+      list.addChild(item, true);
+    }
+    this.items.push(item);
+  }, this);
+};
+goog.inherits(goog.ui.List.Page, goog.Disposable);
+
+/** @inheritDoc */
+goog.ui.List.Page.prototype.disposeInternal = function() {
+  goog.array.forEach(this.items, function(item) {
+    this.list.removeChild(item, true);
+    item.dispose();
+  }, this);
+  this.items = null;
+
+  goog.base(this, 'disposeInternal');
+};
 
 
 
@@ -244,8 +315,6 @@ goog.ui.List.Model = function(size) {
     items: []
   }, this.id);
 
-  this.pages = [];
-
   dm.addDataSource(this.rootNode);
 
   // TODO: Be optional.
@@ -271,16 +340,14 @@ goog.inherits(goog.ui.List.Model, goog.events.EventTarget);
 /**
  * We should cache a page instance because we should cache height
  * of items in a page.
- * @param {number} pageIndex .
+ * @param {number} offset .
+ * @param {number} size .
  * @return {goog.result.SimpleResult} .
  */
-goog.ui.List.Model.prototype.getResult = function(pageIndex) {
-  var page = this.pages[pageIndex];
-  if (!page) {
-    page = this.pages[pageIndex] = new goog.ui.List.Model.Page(
-        this, this.perPage * pageIndex, this.perPage);
-  }
-  return page.getResult();
+goog.ui.List.Model.prototype.getResult = function(offset, size) {
+  var collector = new goog.ui.List.Model.Collector(
+        this, offset, size);
+  return collector.getResult();
 };
 
 goog.ui.List.Model.prototype.getTotal = function() {
@@ -332,7 +399,7 @@ goog.ui.List.Model.prototype.saveNewTotal = function(newTotal) {
 /**
  * @constructor
  */
-goog.ui.List.Model.Page = function(model, offset, size) {
+goog.ui.List.Model.Collector = function(model, offset, size) {
   this.id = null; // Lazily initialized
   this.model = model;
   this.offset = offset;
@@ -342,14 +409,14 @@ goog.ui.List.Model.Page = function(model, offset, size) {
 /**
  * @return {string} .
  */
-goog.ui.List.Model.Page.prototype.getId = function() {
+goog.ui.List.Model.Collector.prototype.getId = function() {
   return this.id || goog.getUid(this);
 };
 
 /**
  * @return {goog.result.SimpleResult} .
  */
-goog.ui.List.Model.Page.prototype.getResult = function() {
+goog.ui.List.Model.Collector.prototype.getResult = function() {
   var result = new goog.result.SimpleResult();
   var items = this.collectLocal_();
   if (items) {
@@ -369,7 +436,7 @@ goog.ui.List.Model.Page.prototype.getResult = function() {
  * @private
  * @return {Array.<Object>} .
  */
-goog.ui.List.Model.Page.prototype.collectLocal_ = function() {
+goog.ui.List.Model.Collector.prototype.collectLocal_ = function() {
   var items = [];
   if (goog.iter.every(
         goog.iter.range(this.offset, this.offset + this.size), function(i) {
@@ -390,7 +457,7 @@ goog.ui.List.Model.Page.prototype.collectLocal_ = function() {
  * @param {function(Object)} callback .
  * @param {Object=} opt_obj .
  */
-goog.ui.List.Model.Page.prototype.fetchRemote_ = function(callback, opt_obj) {
+goog.ui.List.Model.Collector.prototype.fetchRemote_ = function(callback, opt_obj) {
   var me = this;
   me.model.xm.send(
         this.getId(),
@@ -405,7 +472,9 @@ goog.ui.List.Model.Page.prototype.fetchRemote_ = function(callback, opt_obj) {
 /**
  * @private
  */
-goog.ui.List.Model.Page.prototype.createUrl_ = function() {
+goog.ui.List.Model.Collector.prototype.createUrl_ = function() {
+  goog.asserts.assertNumber(this.offset);
+  goog.asserts.assertNumber(this.size);
   var url = new goog.Uri('/api');
   url.getQueryData().extend({
     offset: this.offset,

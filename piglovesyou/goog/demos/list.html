@@ -19,10 +19,12 @@
 
 goog.require('goog.Uri');
 goog.require('goog.array');
+goog.require('goog.async.Delay');
 goog.require('goog.ds.DataManager');
 goog.require('goog.ds.FastDataNode');
 goog.require('goog.ds.JsDataSource');
 goog.require('goog.iter');
+goog.require('goog.math.Range');
 goog.require('goog.net.XhrManager');
 goog.require('goog.ui.Component');
 
@@ -59,7 +61,7 @@ goog.require('goog.ui.Component');
 
   <script>
     var model = new goog.ui.List.Model();
-    var list = new goog.ui.List(model)
+    var list = new goog.ui.List(model, 10);
     list.decorate(document.getElementById('my-list'));
   </script>
 

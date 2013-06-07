@@ -31,7 +31,7 @@ var createItems = function(offset, size) {
 
 var createResponse = function(offset, size) {
   return {
-    total: 5000 * 1000,
+    total: 500 * 100,
     items: createItems(offset, size)
   };
 };
