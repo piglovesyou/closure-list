@@ -32,7 +32,7 @@ goog.ui.List = function(model, perPage, itemHeight, opt_itemType, opt_itemRender
 
   this.model = model;
   this.perPage = perPage;
-  this.itemHeight = goog.isNumber(itemHeight) ? itemHeight : 48;
+  this.itemHeight = goog.isNumber(itemHeight) ? itemHeight : 49;
 
   this.pages = [];
 
@@ -99,7 +99,7 @@ goog.ui.List.prototype.enterDocument = function() {
   var eh = this.getHandler();
   var delay = new goog.async.Delay(function() {
     this.fillViewport();
-  }, 1000, this);
+  }, 200, this);
   eh.listen(this.getElement(), 'scroll', function(e) {
     delay.start();
   });
@@ -126,7 +126,7 @@ goog.ui.List.prototype.fillViewport = function() {
         return true;
       }
       return false;
-    })
+    });
 
     this.adjustContentPadding(range);
 
@@ -155,16 +155,6 @@ goog.ui.List.prototype.adjustContentPadding = function(range) {
   });
 };
 
-
-// goog.ui.List.prototype.renderItems = function(items) {
-//   var dh = this.getDomHelper();
-//   goog.array.forEach(items, function(node) {
-//     var i = new this.ItemType(node, dh);
-//     this.addChild(i, true);
-//   }, this);
-// };
-
-
 /** @inheritDoc */
 goog.ui.List.prototype.disposeInternal = function() {
   goog.base(this, 'disposeInternal');
@@ -186,6 +176,7 @@ goog.ui.List.Page = function(list, records, opt_prepend) {
   this.items = [];
   goog.array.forEach(records, function(node, i) {
     var item = new list.ItemType(node);
+    // TODO: prepare this
     if (opt_prepend) {
       list.addChildAt(item, i, true);
     } else {
@@ -199,6 +190,7 @@ goog.inherits(goog.ui.List.Page, goog.Disposable);
 /** @inheritDoc */
 goog.ui.List.Page.prototype.disposeInternal = function() {
   goog.array.forEach(this.items, function(item) {
+    // TODO: Unrendered correctly?
     this.list.removeChild(item, true);
     item.dispose();
   }, this);
@@ -230,6 +222,7 @@ goog.inherits(goog.ui.List.Item, goog.ui.Component);
 /** @inheritDoc */
 goog.ui.List.Item.prototype.createDom = function() {
   var dh = this.getDomHelper();
+  // TODO: use renderer
   var el = dh.createDom('div', 'my-list-item',
       this.createContent());
   this.setElementInternal(el);
@@ -243,8 +236,8 @@ goog.ui.List.Item.prototype.createContent = function() {
   var dh = this.getDomHelper();
   var fragment = dh.getDocument().createDocumentFragment();
   dh.append(fragment,
-      dh.createDom('div', null, this.node.title),
-      dh.createDom('div', null, this.node.body));
+      dh.createDom('div', null, this.node.id),
+      dh.createDom('div', null, this.node.title));
   return fragment;
 };
 
@@ -291,6 +284,7 @@ goog.ui.List.Item.Renderer.prototype.createDom = function(component) {
 
 goog.ui.List.Item.Renderer.prototype.createContent = function(component, parentNode, ds) {
   var dh = component.getDomHelper();
+  console.log(ds);
   dh.append(parentNode,
       dh.createDom('div', 'yeah', 'ohh'),
       dh.createDom('div', 'yeah', 'ohh'));
