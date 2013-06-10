@@ -10,15 +10,19 @@
 goog.provide('goog.ui.List');
 goog.provide('goog.ui.List.Item');
 goog.provide('goog.ui.List.Item.Renderer');
-goog.provide('goog.ui.List.Model');
 
+goog.require('goog.Uri');
+goog.require('goog.array');
+goog.require('goog.async.Delay');
+goog.require('goog.ds.DataManager');
+goog.require('goog.ds.FastDataNode');
+goog.require('goog.ds.JsDataSource');
+goog.require('goog.iter');
+goog.require('goog.math.Range');
+goog.require('goog.net.XhrManager');
+goog.require('goog.ui.Component');
+goog.require('goog.ui.list.Model');
 
-
-
-goog.scope(function() {
-
-// for devel
-var dm = goog.ds.DataManager.getInstance();
 
 
 
@@ -37,21 +41,27 @@ goog.ui.List = function(model, perPage, itemHeight, opt_itemType, opt_itemRender
   this.pages = [];
 
   this.ItemType = opt_itemType || goog.ui.List.Item;
-  this.itemRenderer = opt_itemRenderer || goog.ui.List.Item.Renderer.getInstance();
+  this.itemRenderer = opt_itemRenderer ||
+      goog.ui.List.Item.Renderer.getInstance();
 
   var dh = this.getDomHelper();
 };
 goog.inherits(goog.ui.List, goog.ui.Component);
 
 
+/**
+ * @type {number}
+ */
 goog.ui.List.prototype.heightCache = -1;
 
 
+/***/
 goog.ui.List.prototype.updateHeightCache = function() {
   this.heightCache = goog.style.getContentBoxSize(this.getElement()).height;
 };
 
 
+/** @inheritDoc */
 goog.ui.List.prototype.getContentElement = function() {
   return this.contentElement;
 };
@@ -72,6 +82,7 @@ goog.ui.List.prototype.decorateInternal = function(element) {
 };
 
 
+/***/
 goog.ui.List.prototype.clearContent = function() {
   var dh = this.getDomHelper();
   dh.removeChildren(this.getContentElement());
@@ -107,40 +118,75 @@ goog.ui.List.prototype.enterDocument = function() {
 };
 
 
+goog.ui.List.prototype.lastPageRange_;
+
 goog.ui.List.prototype.fillViewport = function() {
-  var range = this.calcPageRange();
+  var dh = this.getDomHelper();
+  var range = this.calcPageRangeToCreate();
 
-  var result = this.model.getResult(range.start * this.perPage,
-      range.end * this.perPage);
-  result.wait(goog.bind(function(result) {
-
-    goog.iter.forEach(goog.iter.range(range.start, range.end), function(n) {
-      if (this.pages[n]) return;
-      this.pages[n] = new goog.ui.List.Page(this, result.getValue());
-    }, this);
-
-    // Remove extra pages.
-    goog.array.removeIf(this.pages, function(page, i) {
-      if (i < range.start || range.end <= i) {
-        page.dispose();
-        return true;
+  // var result = this.model.getResult(range.start * this.perPage,
+  //     range.end * this.perPage);
+  
+  goog.iter.forEach(goog.iter.range(range.start, range.end), function(pageIndex) {
+    if (this.pages[pageIndex]) return;
+    var p = new goog.ui.List.Page(this, pageIndex);
+    this.pages[pageIndex] = p;
+    p.request(function(pageFragment) {
+      var contentEl = this.getContentElement();
+      if (this.pages[pageIndex + 1]) {
+        dh.prepend(contentEl, pageFragment);
+      } else {
+        dh.append(contentEl, pageFragment);
       }
-      return false;
-    });
 
-    this.adjustContentPadding(range);
+      this.adjustContentPadding(range);
+    }, this)
+  }, this);
 
-  }, this));
+  // Remove extra pages.
+  goog.array.removeIf(this.pages, function(page, i) {
+    if (i < range.start || range.end <= i) {
+      page.dispose();
+      return true;
+    }
+    return false;
+  });
 };
 
-goog.ui.List.prototype.calcPageRange = function() {
+goog.ui.List.getRangeDiff_ = function(range, factor) {
+  goog.iter.forEach
+}
+
+goog.ui.List.prototype.calcPageRangeToCreate = function() {
   var el = this.getElement(),
       scrollTop = el.scrollTop,
       viewportHeight = el.offsetHeight,
       pageHeight = this.itemHeight * this.model.perPage,
-      upperPageIndex = Math.floor(scrollTop / pageHeight),
-      lowerPageIndex = Math.floor((scrollTop + viewportHeight) / pageHeight);
+      currUpperPageIndex = this.getUpperPageIndex(),
+      currLowerPageIndex = this.getLowerPageIndex(),
+      upperPageIndex = Math.max(currUpperPageIndex, Math.floor(scrollTop / pageHeight)),
+      lowerPageIndex = currLowerPageIndex >= 0 ? Math.floor((scrollTop + viewportHeight) / pageHeight) : 0;
+  console.log(currUpperPageIndex, upperPageIndex);
+  console.log(upperPageIndex, lowerPageIndex + 1);
   return new goog.math.Range(upperPageIndex, lowerPageIndex + 1);
+};
+
+/**
+ * @return {number} .
+ */
+goog.ui.List.prototype.getUpperPageIndex = function() {
+  return goog.array.findIndex(this.pages, function(page) {
+    return !!page;
+  });
+};
+
+/**
+ * @return {number} .
+ */
+goog.ui.List.prototype.getLowerPageIndex = function() {
+  return goog.array.findIndexRight(this.pages, function(page) {
+    return !!page;
+  });
 };
 
 goog.ui.List.prototype.adjustContentPadding = function(range) {
@@ -170,26 +216,50 @@ goog.ui.List.prototype.disposeInternal = function() {
  * @constructor
  * @extends {goog.Disposable}
  */
-goog.ui.List.Page = function(list, records, opt_prepend) {
+goog.ui.List.Page = function(list, index, opt_prepend) {
   goog.base(this);
   this.list = list;
-  this.items = [];
-  goog.array.forEach(records, function(node, i) {
-    var item = new list.ItemType(node);
-    // TODO: prepare this
-    if (opt_prepend) {
-      list.addChildAt(item, i, true);
-    } else {
-      list.addChild(item, true);
-    }
-    this.items.push(item);
-  }, this);
+  this.index = index;
+  this.itemsRef = [];
 };
 goog.inherits(goog.ui.List.Page, goog.Disposable);
 
+
+goog.ui.List.Page.prototype.request = function(callback, opt_obj) {
+  var me = this,
+      index = me.index,
+      list = me.list,
+      dh = list.getDomHelper(),
+      ItemType = list.ItemType,
+      perPage = list.perPage,
+      result = list.model.getResult(index * perPage, perPage);
+
+  result.wait(function(result) {
+    var records = result.getValue(),
+        itemsRef = me.itemsRef,
+        fragment = dh.getDocument().createDocumentFragment();
+
+    goog.array.forEach(records, function(node, i) {
+      var item = new ItemType(node);
+      itemsRef.push(item);
+      item.createDom();
+      dh.append(fragment, item.getElement());
+    });
+
+    callback.call(opt_obj, fragment);
+  });
+
+};
+
+goog.ui.List.Page.prototype.enterItems = function() {
+  goog.array.forEach(this.itemsRef, function(item) {
+    item.enterDocument();
+  });
+};
+
 /** @inheritDoc */
 goog.ui.List.Page.prototype.disposeInternal = function() {
-  goog.array.forEach(this.items, function(item) {
+  goog.array.forEach(this.itemsRef, function(item) {
     // TODO: Unrendered correctly?
     this.list.removeChild(item, true);
     item.dispose();
@@ -291,191 +361,3 @@ goog.ui.List.Item.Renderer.prototype.createContent = function(component, parentN
   return parentNode;
 };
 
-
-
-
-
-
-/**
- * @constructor
- */
-goog.ui.List.Model = function(size) {
-  this.id = 'list:' + goog.getUid(this);
-
-  // We use FastDataNode so that a soy function
-  // can accept the node as the same as an object.
-  this.rootNode = new goog.ds.FastDataNode({
-    total: -1,
-    items: []
-  }, this.id);
-
-  dm.addDataSource(this.rootNode);
-
-  // TODO: Be optional.
-  this.xm = new goog.net.XhrManager();
-
-  this.perPage = 10;
-
-  // For devel.
-  // var me = this;
-  // var r = me.get(2);
-  // r.wait(function(r) {
-  //   console.log(r.getValue());
-  // });
-  // setTimeout(function() {
-  //   var r2 = me.get(2);
-  //   r2.wait(function(r) {
-  //     console.log(r2.getValue());
-  //   });
-  // }, 2000);
-};
-goog.inherits(goog.ui.List.Model, goog.events.EventTarget);
-
-/**
- * We should cache a page instance because we should cache height
- * of items in a page.
- * @param {number} offset .
- * @param {number} size .
- * @return {goog.result.SimpleResult} .
- */
-goog.ui.List.Model.prototype.getResult = function(offset, size) {
-  var collector = new goog.ui.List.Model.Collector(
-        this, offset, size);
-  return collector.getResult();
-};
-
-goog.ui.List.Model.prototype.getTotal = function() {
-  return this.rootNode.getChildNode('total').get();
-};
-
-goog.ui.List.Model.prototype.getItemsNode = function() {
-  return this.rootNode.getChildNode('items');
-};
-
-/**
- * @param {Array} newItems .
- * @param {number} from .
- * @return {Array.<Object>} Node set of array.
- */
-goog.ui.List.Model.prototype.saveItems = function(newItems, from) {
-  var itemsNode = this.getItemsNode();
-  var i = 0;
-  var items = [];
-  goog.iter.forEach(goog.iter.range(from, from + this.perPage), function(n) {
-    var name = 'item:' + n, newItem;
-    var newItem = newItems[i++];
-    itemsNode.setChildNode(name, newItem);
-    items.push(itemsNode.getChildNode(name));
-  });
-  return items;
-};
-
-/**
- * @param {number} newTotal .
- * @return {Object} .
- */
-goog.ui.List.Model.prototype.saveNewTotal = function(newTotal) {
-  var node = this.rootNode.getChildNode('total');
-  goog.asserts.assert(node);
-  if (node.get() === newTotal) {
-  } else {
-    node.set(newTotal);
-  }
-  return node;
-};
-
-
-
-
-
-
-
-/**
- * @constructor
- */
-goog.ui.List.Model.Collector = function(model, offset, size) {
-  this.id = null; // Lazily initialized
-  this.model = model;
-  this.offset = offset;
-  this.size = size;
-};
-
-/**
- * @return {string} .
- */
-goog.ui.List.Model.Collector.prototype.getId = function() {
-  return this.id || goog.getUid(this);
-};
-
-/**
- * @return {goog.result.SimpleResult} .
- */
-goog.ui.List.Model.Collector.prototype.getResult = function() {
-  var result = new goog.result.SimpleResult();
-  var items = this.collectLocal_();
-  if (items) {
-    console.log('local');
-    result.setValue(items);
-  } else {
-    console.log('remote');
-    this.fetchRemote_(function(json) {
-      this.model.saveNewTotal(json.total);
-      result.setValue(this.model.saveItems(json.items, this.offset));
-    }, this);
-  }
-  return result;
-};
-
-/**
- * @private
- * @return {Array.<Object>} .
- */
-goog.ui.List.Model.Collector.prototype.collectLocal_ = function() {
-  var items = [];
-  if (goog.iter.every(
-        goog.iter.range(this.offset, this.offset + this.size), function(i) {
-    var itemNode = this.model.getItemsNode().getChildNode('item:' + i);
-    if (itemNode) {
-      items.push(itemNode);
-      return true;
-    }
-    return false;
-  }, this)) {
-    return items;
-  }
-  return null;
-};
-
-/**
- * @private
- * @param {function(Object)} callback .
- * @param {Object=} opt_obj .
- */
-goog.ui.List.Model.Collector.prototype.fetchRemote_ = function(callback, opt_obj) {
-  var me = this;
-  me.model.xm.send(
-        this.getId(),
-        this.createUrl_(),
-        null, null, null, null, function(e) {
-    var xhr = e.target,
-        json = xhr.getResponseJson();
-    callback.call(opt_obj, json);
-  });
-};
-
-/**
- * @private
- */
-goog.ui.List.Model.Collector.prototype.createUrl_ = function() {
-  goog.asserts.assertNumber(this.offset);
-  goog.asserts.assertNumber(this.size);
-  var url = new goog.Uri('/api');
-  url.getQueryData().extend({
-    offset: this.offset,
-    size: this.size
-  });
-  return url.toString();
-};
-
-
-}); // goog.scope
