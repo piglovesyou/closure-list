@@ -108,9 +108,10 @@ goog.ui.List.prototype.enterDocument = function() {
   goog.base(this, 'enterDocument');
   this.updateHeightCache();
   var eh = this.getHandler();
+
   var delay = new goog.async.Delay(function() {
     this.fillViewport();
-  }, 200, this);
+  }, 100, this);
   eh.listen(this.getElement(), 'scroll', function(e) {
     delay.start();
   });
@@ -123,9 +124,6 @@ goog.ui.List.prototype.lastPageRange_;
 goog.ui.List.prototype.fillViewport = function() {
   var dh = this.getDomHelper();
   var range = this.calcPageRangeToCreate();
-
-  // var result = this.model.getResult(range.start * this.perPage,
-  //     range.end * this.perPage);
   
   goog.iter.forEach(goog.iter.range(range.start, range.end), function(pageIndex) {
     if (this.pages[pageIndex]) return;
@@ -134,7 +132,7 @@ goog.ui.List.prototype.fillViewport = function() {
     p.request(function(pageFragment) {
       var contentEl = this.getContentElement();
       if (this.pages[pageIndex + 1]) {
-        dh.prepend(contentEl, pageFragment);
+        dh.insertChildAt(contentEl, pageFragment, 0);
       } else {
         dh.append(contentEl, pageFragment);
       }
@@ -144,12 +142,11 @@ goog.ui.List.prototype.fillViewport = function() {
   }, this);
 
   // Remove extra pages.
-  goog.array.removeIf(this.pages, function(page, i) {
+  goog.array.forEach(this.pages, function(page, i, pages) {
     if (i < range.start || range.end <= i) {
       page.dispose();
-      return true;
+      delete pages[i];
     }
-    return false;
   });
 };
 
@@ -161,13 +158,11 @@ goog.ui.List.prototype.calcPageRangeToCreate = function() {
   var el = this.getElement(),
       scrollTop = el.scrollTop,
       viewportHeight = el.offsetHeight,
-      pageHeight = this.itemHeight * this.model.perPage,
-      currUpperPageIndex = this.getUpperPageIndex(),
-      currLowerPageIndex = this.getLowerPageIndex(),
-      upperPageIndex = Math.max(currUpperPageIndex, Math.floor(scrollTop / pageHeight)),
-      lowerPageIndex = currLowerPageIndex >= 0 ? Math.floor((scrollTop + viewportHeight) / pageHeight) : 0;
-  console.log(currUpperPageIndex, upperPageIndex);
-  console.log(upperPageIndex, lowerPageIndex + 1);
+      pageHeight = this.itemHeight * this.perPage,
+      upperPageIndex = Math.floor(scrollTop / pageHeight),
+      lowerPageIndex = Math.floor((scrollTop + viewportHeight) / pageHeight);
+  // console.log(currUpperPageIndex, upperPageIndex);
+  // console.log(upperPageIndex, lowerPageIndex + 1);
   return new goog.math.Range(upperPageIndex, lowerPageIndex + 1);
 };
 
@@ -193,8 +188,9 @@ goog.ui.List.prototype.adjustContentPadding = function(range) {
   var el = this.getContentElement(),
       total = this.model.getTotal();
 
+  console.log(range.start, range.end);
   var top = range.start * this.perPage;
-  var bottom = total - range.end * this.perPage;
+  var bottom = total - ((range.end - 1) * this.perPage);
   goog.style.setStyle(el, {
     paddingTop: top * this.itemHeight + 'px',
     paddingBottom: bottom * this.itemHeight + 'px'
@@ -216,7 +212,7 @@ goog.ui.List.prototype.disposeInternal = function() {
  * @constructor
  * @extends {goog.Disposable}
  */
-goog.ui.List.Page = function(list, index, opt_prepend) {
+goog.ui.List.Page = function(list, index) {
   goog.base(this);
   this.list = list;
   this.index = index;
@@ -234,13 +230,16 @@ goog.ui.List.Page.prototype.request = function(callback, opt_obj) {
       perPage = list.perPage,
       result = list.model.getResult(index * perPage, perPage);
 
+  // console.log('======', index * perPage, perPage);
+
   result.wait(function(result) {
     var records = result.getValue(),
         itemsRef = me.itemsRef,
         fragment = dh.getDocument().createDocumentFragment();
-
+    
     goog.array.forEach(records, function(node, i) {
       var item = new ItemType(node);
+      list.addChild(item);
       itemsRef.push(item);
       item.createDom();
       dh.append(fragment, item.getElement());
@@ -261,10 +260,10 @@ goog.ui.List.Page.prototype.enterItems = function() {
 goog.ui.List.Page.prototype.disposeInternal = function() {
   goog.array.forEach(this.itemsRef, function(item) {
     // TODO: Unrendered correctly?
-    this.list.removeChild(item, true);
+    var r = this.list.removeChild(item, true);
     item.dispose();
   }, this);
-  this.items = null;
+  this.itemsRef = null;
 
   goog.base(this, 'disposeInternal');
 };
