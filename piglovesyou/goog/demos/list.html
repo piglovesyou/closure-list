@@ -28,9 +28,9 @@ goog.require('goog.math.Range');
 goog.require('goog.net.XhrManager');
 goog.require('goog.ui.Component');
 
-    goog.require('goog.result.DependentResult');
-    goog.require('goog.result.Result');
-    goog.require('goog.result.SimpleResult');
+goog.require('goog.result.DependentResult');
+goog.require('goog.result.Result');
+goog.require('goog.result.SimpleResult');
 
   </script>
 
@@ -45,6 +45,7 @@ goog.require('goog.ui.Component');
       height: 350px;
       border: 2px darkblue solid;
       overflow: auto;
+      -webkit-overflow-scrolling:touch;
     }
     .my-list-item {
       height: 48px;
@@ -62,8 +63,6 @@ goog.require('goog.ui.Component');
       <div style="height:100%;background:lightblue">yeah</div>
     </div>
   </div>
-
-
 
   <script>
     var list = new goog.ui.List;

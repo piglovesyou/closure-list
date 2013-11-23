@@ -65,7 +65,7 @@ goog.ui.List.prototype.canDecorate = function(element) {
 
 var rowHeight = 80;
 var rowCountPerPage = 5;
-var totalRows = 200;
+var totalRows = 20;
 var totalHeight = rowHeight * totalRows;
 var pageHeight = rowHeight * rowCountPerPage;
 var totalPage = Math.ceil(totalHeight / pageHeight);
@@ -98,37 +98,29 @@ goog.ui.List.prototype.enterDocument = function() {
     goog.dom.removeChildren(content);
 
     var top = element.scrollTop;
-
     var paddingTopPage = Math.floor(top/pageHeight);
-    var isEdge = paddingTopPage == 0 && top + elementHeight / 2 < (pageHeight / 2) ||
-                 paddingTopPage + 1 == totalPage &&
-                    top + elementHeight / 2 > (paddingTopPage * pageHeight + pageHeight / 2);
 
-    console.log(isEdge);
+    var boxMiddle = top + elementHeight / 2;
+    var pageMiddle = paddingTopPage * pageHeight + pageHeight / 2;
 
+    var isEdge = paddingTopPage == 0 && boxMiddle < pageMiddle ||
+                 paddingTopPage + 1 == totalPage && boxMiddle > pageMiddle;
+    var concretePageCount = isEdge ? 1 : 2;
+
+    var page1index;
     if (isEdge) {
-      var page1index = paddingTopPage;
-
-      content.style.height = pageHeight + 'px';
-      dh.append(content, 
-        createPage(page1index));
-      content.style.paddingTop = page1index * pageHeight + 'px'
-      content.style.paddingBottom = (totalPage - page1index - 1) * pageHeight + 'px';
+      page1index = paddingTopPage;
     } else {
-
-      var boxMiddle = top + (elementHeight / 2);
-      var pageMiddle = paddingTopPage + (pageHeight / 2);
-      
-      var needBottom = boxMiddle > pageMiddle;
-      var page1index = needBottom ?
-          paddingTopPage : paddingTopPage - 1;
-      content.style.height = pageHeight * 2 + 'px';
-      dh.append(content, 
-        createPage(page1index),
-        createPage(page1index + 1));
-      content.style.paddingTop = page1index * pageHeight + 'px'
-      content.style.paddingBottom = (totalPage - page1index - 2) * pageHeight + 'px';
+      page1index = boxMiddle > pageMiddle ?
+        paddingTopPage : paddingTopPage - 1;
     }
+
+    content.style.height = pageHeight * concretePageCount + 'px';
+    dh.append(content, 
+      createPage(page1index),
+      isEdge ? null : createPage(page1index + 1));
+    content.style.paddingTop = page1index * pageHeight + 'px'
+    content.style.paddingBottom = (totalPage - page1index - concretePageCount) * pageHeight + 'px';
   };
   eh.listen(element, 'scroll', redraw);
   redraw();
