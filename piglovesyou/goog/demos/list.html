@@ -28,12 +28,12 @@ goog.require('goog.math.Range');
 goog.require('goog.net.XhrManager');
 goog.require('goog.ui.Component');
 
-
     goog.require('goog.result.DependentResult');
     goog.require('goog.result.Result');
     goog.require('goog.result.SimpleResult');
+
   </script>
-  <script src="../ui/list/model.js"></script>
+
   <script src="../ui/list/list.js"></script>
 
   <style type="text/css">
@@ -43,7 +43,7 @@ goog.require('goog.ui.Component');
     #my-list {
       width: 300px;
       height: 350px;
-      border: 2px lightgreen solid;
+      border: 2px darkblue solid;
       overflow: auto;
     }
     .my-list-item {
@@ -58,15 +58,15 @@ goog.require('goog.ui.Component');
   <h1>goog.ui.List</h1>
 
   <div id="my-list">
-    <div class="my-list-inner">
+    <div class="my-list-container">
+      <div style="height:100%;background:lightblue">yeah</div>
     </div>
   </div>
 
 
 
   <script>
-    var model = new goog.ui.list.Model();
-    var list = new goog.ui.List(model, 25);
+    var list = new goog.ui.List;
     list.decorate(document.getElementById('my-list'));
   </script>
 
