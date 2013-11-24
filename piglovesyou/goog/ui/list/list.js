@@ -34,6 +34,8 @@ goog.require('goog.ui.Component');
  */
 goog.ui.List = function(opt_domHelper) {
   goog.base(this, opt_domHelper);
+
+  this.lastConcretePageRange = new goog.math.Range(-1, -1);
 };
 goog.inherits(goog.ui.List, goog.ui.Component);
 
@@ -89,32 +91,37 @@ goog.ui.List.prototype.redraw = function() {
   var element = this.getElement();
   var content = this.contentEl;
 
-  goog.dom.removeChildren(content);
-
   var top = element.scrollTop;
-  var paddingTopPage = Math.floor(top/pageHeight);
+  var paddingTopPage = Math.floor(top / pageHeight);
 
   var boxMiddle = top + this.elementHeight / 2;
   var pageMiddle = paddingTopPage * pageHeight + pageHeight / 2;
 
   var isEdge = paddingTopPage == 0 && boxMiddle < pageMiddle ||
                paddingTopPage + 1 == totalPage && boxMiddle > pageMiddle;
-  var concretePageCount = isEdge ? 1 : 2;
+  var rangeLength = isEdge ? 1 : 2;
 
-  var page1index;
+  var range;
   if (isEdge) {
-    page1index = paddingTopPage;
+    range = new goog.math.Range(paddingTopPage, paddingTopPage);
   } else {
-    page1index = boxMiddle > pageMiddle ?
+    var page1index = boxMiddle > pageMiddle ?
       paddingTopPage : paddingTopPage - 1;
+    range = new goog.math.Range(page1index, page1index + rangeLength - 1);
   }
 
-  content.style.height = pageHeight * concretePageCount + 'px';
-  dh.append(content, 
-    this.createPage(page1index),
-    isEdge ? null : this.createPage(page1index + 1));
-  content.style.paddingTop = page1index * pageHeight + 'px'
-  content.style.paddingBottom = (totalPage - page1index - concretePageCount) * pageHeight + 'px';
+  if (goog.math.Range.equals(range, this.lastConcretePageRange)) {
+    return;
+  }
+  this.lastConcretePageRange = range;
+
+  goog.dom.removeChildren(content);
+  content.style.height = pageHeight * rangeLength + 'px';
+  content.style.paddingTop = range.start * pageHeight + 'px';
+  content.style.paddingBottom =
+      (totalPage - range.start - rangeLength) * pageHeight + 'px';
+  dh.append(content,
+      this.createPage(range.start), isEdge ? null : this.createPage(range.end));
 };
 
 
@@ -124,7 +131,7 @@ goog.ui.List.prototype.createPage = function(index) {
   var page = dh.createDom('div', {
     id: 'page_' + index
   });
-  for (var i=0; i < rowCountPerPage; i++) {
+  for (var i = 0; i < rowCountPerPage; i++) {
     dh.appendChild(page,
       dh.createDom('div', {
         style: 'height:' + rowHeight + 'px'
