@@ -35,9 +35,9 @@ goog.require('goog.ui.Component');
 goog.ui.List = function(opt_domHelper) {
   goog.base(this, opt_domHelper);
 
-  this.rowHeight = 100;
-  this.rowCountPerPage = 5;
-  this.totalRows = 17;
+  this.rowHeight = 60;
+  this.rowCountPerPage = 8;
+  this.totalRows = 27;
   this.updateParamsInternal();
 };
 goog.inherits(goog.ui.List, goog.ui.Component);
@@ -120,14 +120,17 @@ goog.ui.List.prototype.redraw = function() {
 
   var concreateContentHeight = this.calcConcreteRowCount(range) * this.rowHeight;
 
-  goog.dom.removeChildren(content);
-  content.style.height = concreateContentHeight + 'px';
+  this.removeChildren(true);
   content.style.paddingTop = range.start * this.pageHeight + 'px';
   content.style.paddingBottom =
       (this.rowHeight * this.totalRows) - range.start * this.pageHeight - concreateContentHeight + 'px';
+  // content.style.height = concreateContentHeight + 'px';
   dh.append(content,
       this.createPage(range.start),
       isEdge ? null : this.createPage(range.end));
+  this.forEachChild(function(child) {
+    child.enterDocument();
+  });
 };
 
 
@@ -143,17 +146,20 @@ goog.ui.List.prototype.getRowCountInPage = function(pageIndex) {
 }
 
 
+/**
+ * @param {number} index .
+ * @return {Node} .
+ */
 goog.ui.List.prototype.createPage = function(index) {
   var dh = this.getDomHelper();
-
   var page = dh.getDocument().createDocumentFragment();
   var start = index * this.rowCountPerPage;
   var end = start + this.getRowCountInPage(index);
   for (var i = start; i < end; i++) {
-    dh.appendChild(page,
-      dh.createDom('div', {
-        style: 'height:' + this.rowHeight + 'px'
-      }, '' + i));
+    var row = new goog.ui.List.Item(i, this.rowHeight);
+    row.createDom();
+    dh.appendChild(page, row.getElement());
+    this.addChild(row);
   }
   return page;
 };
@@ -161,5 +167,69 @@ goog.ui.List.prototype.createPage = function(index) {
 
 /** @inheritDoc */
 goog.ui.List.prototype.disposeInternal = function() {
+  goog.base(this, 'disposeInternal');
+};
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+/**
+ * @constructor
+ * @param {goog.dom.DomHelper=} opt_domHelper .
+ * @extends {goog.ui.Component}
+ */
+goog.ui.List.Item = function(index, height, opt_domHelper) {
+  goog.base(this, opt_domHelper);
+  this.index = index;
+  this.height = height;
+};
+goog.inherits(goog.ui.List.Item, goog.ui.Component);
+
+
+/** @inheritDoc */
+goog.ui.List.Item.prototype.createDom = function() {
+  var dh = this.getDomHelper();
+  this.setElementInternal(dh.createDom('div', {
+    style: 'height:' + this.height + 'px'
+  }, '' + this.index));
+};
+
+
+/** @inheritDoc */
+goog.ui.List.Item.prototype.decorateInternal = function(element) {
+  goog.base(this, 'decorateInternal', element);
+};
+
+
+/** @inheritDoc */
+goog.ui.List.Item.prototype.canDecorate = function(element) {
+  if (element) {
+    return true;
+  }
+  return false;
+};
+
+
+/** @inheritDoc */
+goog.ui.List.Item.prototype.enterDocument = function() {
+  goog.base(this, 'enterDocument');
+};
+
+
+/** @inheritDoc */
+goog.ui.List.Item.prototype.disposeInternal = function() {
   goog.base(this, 'disposeInternal');
 };
