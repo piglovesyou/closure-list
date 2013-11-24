@@ -65,12 +65,12 @@ goog.ui.List.prototype.canDecorate = function(element) {
 
 
 
-var rowHeight = 80;
+var rowHeight = 100;
 var rowCountPerPage = 5;
-var totalRows = 30;
+var totalRows = 27;
+var lastPageIndex = Math.ceil(totalRows / rowCountPerPage) - 1;
 var totalHeight = rowHeight * totalRows;
 var pageHeight = rowHeight * rowCountPerPage;
-var totalPage = Math.ceil(totalHeight / pageHeight);
 
 /** @inheritDoc */
 goog.ui.List.prototype.enterDocument = function() {
@@ -96,16 +96,17 @@ goog.ui.List.prototype.redraw = function() {
 
   var boxMiddle = top + this.elementHeight / 2;
   var pageMiddle = paddingTopPage * pageHeight + pageHeight / 2;
+  var boxPosLessThanPagePos = boxMiddle < pageMiddle;
 
-  var isEdge = paddingTopPage == 0 && boxMiddle < pageMiddle ||
-               paddingTopPage + 1 == totalPage && boxMiddle > pageMiddle;
+  var isEdge = paddingTopPage == 0 && boxPosLessThanPagePos ||
+               paddingTopPage == lastPageIndex && !boxPosLessThanPagePos;
   var rangeLength = isEdge ? 1 : 2;
 
   var range;
   if (isEdge) {
     range = new goog.math.Range(paddingTopPage, paddingTopPage);
   } else {
-    var page1index = boxMiddle > pageMiddle ?
+    var page1index = !boxPosLessThanPagePos ?
       paddingTopPage : paddingTopPage - 1;
     range = new goog.math.Range(page1index, page1index + rangeLength - 1);
   }
@@ -115,14 +116,30 @@ goog.ui.List.prototype.redraw = function() {
   }
   this.lastConcretePageRange = range;
 
+  var concreateContentHeight = this.calcConcreteRowCount(range) * rowHeight;
+
   goog.dom.removeChildren(content);
-  content.style.height = pageHeight * rangeLength + 'px';
+  content.style.height = concreateContentHeight + 'px';
   content.style.paddingTop = range.start * pageHeight + 'px';
   content.style.paddingBottom =
-      (totalPage - range.start - rangeLength) * pageHeight + 'px';
+      totalHeight - range.start * pageHeight - concreateContentHeight + 'px';
   dh.append(content,
       this.createPage(range.start), isEdge ? null : this.createPage(range.end));
 };
+
+
+goog.ui.List.prototype.calcConcreteRowCount = function(range) {
+  return goog.iter.reduce(goog.iter.range(range.start, range.end + 1), function(count, i) {
+    return count + this.getRowCountInPage(i);
+  }, 0, this);
+};
+
+
+var lastPageRows = totalRows % rowCountPerPage;
+if (lastPageRows == 0) lastPageRows = rowCountPerPage;
+goog.ui.List.prototype.getRowCountInPage = function(pageIndex) {
+  return pageIndex == lastPageIndex ? lastPageRows : rowCountPerPage;
+}
 
 
 goog.ui.List.prototype.createPage = function(index) {
@@ -131,11 +148,13 @@ goog.ui.List.prototype.createPage = function(index) {
   var page = dh.createDom('div', {
     id: 'page_' + index
   });
-  for (var i = 0; i < rowCountPerPage; i++) {
+  var start = index * rowCountPerPage;
+  var end = start + this.getRowCountInPage(index);
+  for (var i = start; i < end; i++) {
     dh.appendChild(page,
       dh.createDom('div', {
         style: 'height:' + rowHeight + 'px'
-      }, '' + (index * rowCountPerPage + i)));
+      }, '' + i));
   }
   return page;
 };
