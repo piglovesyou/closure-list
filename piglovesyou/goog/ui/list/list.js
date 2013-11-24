@@ -146,9 +146,7 @@ goog.ui.List.prototype.getRowCountInPage = function(pageIndex) {
 goog.ui.List.prototype.createPage = function(index) {
   var dh = this.getDomHelper();
 
-  var page = dh.createDom('div', {
-    id: 'page_' + index
-  });
+  var page = dh.getDocument().createDocumentFragment();
   var start = index * this.rowCountPerPage;
   var end = start + this.getRowCountInPage(index);
   for (var i = start; i < end; i++) {
