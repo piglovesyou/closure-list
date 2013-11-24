@@ -65,7 +65,7 @@ goog.ui.List.prototype.canDecorate = function(element) {
 
 var rowHeight = 80;
 var rowCountPerPage = 5;
-var totalRows = 20;
+var totalRows = 30;
 var totalHeight = rowHeight * totalRows;
 var pageHeight = rowHeight * rowCountPerPage;
 var totalPage = Math.ceil(totalHeight / pageHeight);
@@ -77,53 +77,60 @@ goog.ui.List.prototype.enterDocument = function() {
   var eh = this.getHandler();
   var dh = this.getDomHelper();
   var element = this.getElement();
-  var elementHeight = goog.style.getContentBoxSize(element).height;
+  this.elementHeight = goog.style.getContentBoxSize(element).height;
+
+  eh.listen(element, 'scroll', this.redraw);
+  this.redraw();
+};
+
+
+goog.ui.List.prototype.redraw = function() {
+  var dh = this.getDomHelper();
+  var element = this.getElement();
   var content = this.contentEl;
 
-  var createPage = function(index) {
-    var page = dh.createDom('div', {
-      id: 'page_' + index
-    });
-    for (var i=0; i < rowCountPerPage; i++) {
-      dh.appendChild(page,
-        dh.createDom('div', {
-          style: 'height:' + rowHeight + 'px'
-        }, '' + (index * rowCountPerPage + i)));
-    }
-    return page;
-  };
+  goog.dom.removeChildren(content);
 
-  var redraw = function() {
+  var top = element.scrollTop;
+  var paddingTopPage = Math.floor(top/pageHeight);
 
-    goog.dom.removeChildren(content);
+  var boxMiddle = top + this.elementHeight / 2;
+  var pageMiddle = paddingTopPage * pageHeight + pageHeight / 2;
 
-    var top = element.scrollTop;
-    var paddingTopPage = Math.floor(top/pageHeight);
+  var isEdge = paddingTopPage == 0 && boxMiddle < pageMiddle ||
+               paddingTopPage + 1 == totalPage && boxMiddle > pageMiddle;
+  var concretePageCount = isEdge ? 1 : 2;
 
-    var boxMiddle = top + elementHeight / 2;
-    var pageMiddle = paddingTopPage * pageHeight + pageHeight / 2;
+  var page1index;
+  if (isEdge) {
+    page1index = paddingTopPage;
+  } else {
+    page1index = boxMiddle > pageMiddle ?
+      paddingTopPage : paddingTopPage - 1;
+  }
 
-    var isEdge = paddingTopPage == 0 && boxMiddle < pageMiddle ||
-                 paddingTopPage + 1 == totalPage && boxMiddle > pageMiddle;
-    var concretePageCount = isEdge ? 1 : 2;
+  content.style.height = pageHeight * concretePageCount + 'px';
+  dh.append(content, 
+    this.createPage(page1index),
+    isEdge ? null : this.createPage(page1index + 1));
+  content.style.paddingTop = page1index * pageHeight + 'px'
+  content.style.paddingBottom = (totalPage - page1index - concretePageCount) * pageHeight + 'px';
+};
 
-    var page1index;
-    if (isEdge) {
-      page1index = paddingTopPage;
-    } else {
-      page1index = boxMiddle > pageMiddle ?
-        paddingTopPage : paddingTopPage - 1;
-    }
 
-    content.style.height = pageHeight * concretePageCount + 'px';
-    dh.append(content, 
-      createPage(page1index),
-      isEdge ? null : createPage(page1index + 1));
-    content.style.paddingTop = page1index * pageHeight + 'px'
-    content.style.paddingBottom = (totalPage - page1index - concretePageCount) * pageHeight + 'px';
-  };
-  eh.listen(element, 'scroll', redraw);
-  redraw();
+goog.ui.List.prototype.createPage = function(index) {
+  var dh = this.getDomHelper();
+
+  var page = dh.createDom('div', {
+    id: 'page_' + index
+  });
+  for (var i=0; i < rowCountPerPage; i++) {
+    dh.appendChild(page,
+      dh.createDom('div', {
+        style: 'height:' + rowHeight + 'px'
+      }, '' + (index * rowCountPerPage + i)));
+  }
+  return page;
 };
 
 
