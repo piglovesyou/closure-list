@@ -35,7 +35,7 @@ goog.require('goog.ui.Component');
 goog.ui.List = function(opt_domHelper) {
   goog.base(this, opt_domHelper);
 
-  this.lastConcretePageRange = new goog.math.Range(-1, -1);
+  this.lastRange = new goog.math.Range(-1, -1);
 };
 goog.inherits(goog.ui.List, goog.ui.Component);
 
@@ -49,9 +49,9 @@ goog.ui.List.prototype.createDom = function() {
 /** @inheritDoc */
 goog.ui.List.prototype.decorateInternal = function(element) {
   goog.base(this, 'decorateInternal', element);
-  this.contentEl = this.getElementByClass('my-list-container');
 
-  // this.contentEl.style.height = 40 + 'px';
+  this.elementHeight = goog.style.getContentBoxSize(element).height;
+  this.contentEl = this.getElementByClass('my-list-container');
 };
 
 
@@ -67,19 +67,18 @@ goog.ui.List.prototype.canDecorate = function(element) {
 
 var rowHeight = 100;
 var rowCountPerPage = 5;
-var totalRows = 27;
+var totalRows = 17;
 var lastPageIndex = Math.ceil(totalRows / rowCountPerPage) - 1;
-var totalHeight = rowHeight * totalRows;
 var pageHeight = rowHeight * rowCountPerPage;
+var lastPageRows = totalRows % rowCountPerPage;
+if (lastPageRows == 0) lastPageRows = rowCountPerPage;
 
 /** @inheritDoc */
 goog.ui.List.prototype.enterDocument = function() {
   goog.base(this, 'enterDocument');
 
   var eh = this.getHandler();
-  var dh = this.getDomHelper();
   var element = this.getElement();
-  this.elementHeight = goog.style.getContentBoxSize(element).height;
 
   eh.listen(element, 'scroll', this.redraw);
   this.redraw();
@@ -111,10 +110,10 @@ goog.ui.List.prototype.redraw = function() {
     range = new goog.math.Range(page1index, page1index + rangeLength - 1);
   }
 
-  if (goog.math.Range.equals(range, this.lastConcretePageRange)) {
+  if (goog.math.Range.equals(range, this.lastRange)) {
     return;
   }
-  this.lastConcretePageRange = range;
+  this.lastRange = range;
 
   var concreateContentHeight = this.calcConcreteRowCount(range) * rowHeight;
 
@@ -122,9 +121,10 @@ goog.ui.List.prototype.redraw = function() {
   content.style.height = concreateContentHeight + 'px';
   content.style.paddingTop = range.start * pageHeight + 'px';
   content.style.paddingBottom =
-      totalHeight - range.start * pageHeight - concreateContentHeight + 'px';
+      (rowHeight * totalRows) - range.start * pageHeight - concreateContentHeight + 'px';
   dh.append(content,
-      this.createPage(range.start), isEdge ? null : this.createPage(range.end));
+      this.createPage(range.start),
+      isEdge ? null : this.createPage(range.end));
 };
 
 
@@ -135,8 +135,6 @@ goog.ui.List.prototype.calcConcreteRowCount = function(range) {
 };
 
 
-var lastPageRows = totalRows % rowCountPerPage;
-if (lastPageRows == 0) lastPageRows = rowCountPerPage;
 goog.ui.List.prototype.getRowCountInPage = function(pageIndex) {
   return pageIndex == lastPageIndex ? lastPageRows : rowCountPerPage;
 }
