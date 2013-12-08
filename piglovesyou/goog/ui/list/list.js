@@ -41,16 +41,19 @@ goog.ui.List = function(data, opt_domHelper) {
 
   this.rowHeight = 60;
   this.rowCountPerPage = 8;
-  this.totalRows = 27;
   this.updateParamsInternal();
 };
 goog.inherits(goog.ui.List, goog.ui.Component);
 
 
+goog.ui.list.RowNodeNamePrefix = goog.ui.list.Data.RowNodeNamePrefix;
+
+
 goog.ui.List.prototype.updateParamsInternal = function() {
-  this.lastPageIndex = Math.ceil(this.totalRows / this.rowCountPerPage) - 1;
+  console.log('updateParamsInternal', this.data.getTotal());
+  this.lastPageIndex = Math.ceil(this.data.getTotal() / this.rowCountPerPage) - 1;
   this.pageHeight = this.rowHeight * this.rowCountPerPage;
-  this.lastPageRows = this.totalRows % this.rowCountPerPage;
+  this.lastPageRows = this.data.getTotal() % this.rowCountPerPage;
   if (this.lastPageRows == 0) this.lastPageRows = this.rowCountPerPage;
   this.lastRange = new goog.math.Range(-1, -1);
 };
@@ -88,8 +91,10 @@ goog.ui.List.prototype.enterDocument = function() {
   var eh = this.getHandler();
   var element = this.getElement();
 
-  eh.listen(element, 'scroll', this.redraw);
+  eh.listen(element, 'scroll', this.redraw)
+    .listen(this.data, goog.ui.list.Data.EventType.UPDATE_TOTAL, this.updateParamsInternal);
   this.redraw();
+
 };
 
 
@@ -123,7 +128,11 @@ goog.ui.List.prototype.redraw = function() {
   }
   this.lastRange = range;
 
-  var concreateContentHeight = this.calcConcreteRowCount(range) * this.rowHeight;
+  var concreteRowCount = goog.iter.reduce(goog.iter.range(range.start, range.end + 1), function(count, i) {
+    return count + this.getRowCountInPage(i);
+  }, 0, this);
+
+  var concreateContentHeight = concreteRowCount * this.rowHeight;
   this.removeChildren(true); // Yeah, we can not to remove them every time. But how?
 
   // In short, we are creating a virtual content, which contains a top margin,
@@ -131,22 +140,29 @@ goog.ui.List.prototype.redraw = function() {
   // rowHeight * total, so that a browser native scrollbar indicates real size and position.
   content.style.paddingTop = range.start * this.pageHeight + 'px';
   content.style.paddingBottom =
-      (this.rowHeight * this.totalRows) - range.start * this.pageHeight - concreateContentHeight + 'px';
+      (this.rowHeight * this.data.getTotal()) - range.start * this.pageHeight - concreateContentHeight + 'px';
   // content.style.height = concreateContentHeight + 'px';
 
-  dh.append(content,
-      this.createPage(range.start),
-      isEdge ? null : this.createPage(range.end));
+  var pageOnTop = this.createPage(range.start);
+  var pageOnBottom = isEdge ? null : this.createPage(range.end);
+
+  this.data.promiseRows(range.start * this.rowCountPerPage, concreteRowCount)
+    .wait(goog.bind(this.onResolved, this));
+
+  dh.append(content, pageOnTop, pageOnBottom);
   this.forEachChild(function(child) {
     child.enterDocument();
   });
 };
 
 
-goog.ui.List.prototype.calcConcreteRowCount = function(range) {
-  return goog.iter.reduce(goog.iter.range(range.start, range.end + 1), function(count, i) {
-    return count + this.getRowCountInPage(i);
-  }, 0, this);
+goog.ui.List.prototype.onResolved = function(result) {
+  this.forEachChild(function(row) {
+    var data = this.data.getRowByIndex(row.getIndex());
+    if (data) {
+      row.renderContent(data);
+    }
+  }, this);
 };
 
 
@@ -208,12 +224,25 @@ goog.ui.List.Item = function(index, height, opt_domHelper) {
 goog.inherits(goog.ui.List.Item, goog.ui.Component);
 
 
+goog.ui.List.Item.prototype.getIndex = function() {
+  return this.index;
+};
+
+
 /** @inheritDoc */
 goog.ui.List.Item.prototype.createDom = function() {
   var dh = this.getDomHelper();
   this.setElementInternal(dh.createDom('div', {
     style: 'height:' + this.height + 'px'
   }, '' + this.index));
+};
+
+
+/**
+ * @param {goog.ds.FastDataNode} data .
+ */
+goog.ui.List.Item.prototype.renderContent= function(data) {
+  this.getElement().innerHTML = data.id + ' ' + data.title;
 };
 
 

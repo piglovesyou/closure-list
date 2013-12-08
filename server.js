@@ -16,10 +16,12 @@ app.get('/', function(req, res) {
   res.redirect('piglovesyou/goog/demos/list.html');
 });
 
+var total = 40;
+
 var createItems = function(offset, size) {
   var items = [];
-  console.log(offset, offset + size);
-  for (var i = offset; i < offset + size; i++) {
+  // console.log(offset, offset + size);
+  for (var i = offset; i < offset + size && i < total; i++) {
     items.push({
       id: 'id' + i,
       title: 'yeah',
@@ -31,7 +33,7 @@ var createItems = function(offset, size) {
 
 var createResponse = function(offset, size) {
   return {
-    total: 500 * 100,
+    total: total,
     items: createItems(offset, size)
   };
 };

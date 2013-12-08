@@ -66,7 +66,8 @@ goog.require('goog.result.SimpleResult');
   </div>
 
   <script>
-    var list = new goog.ui.List;
+    var data = new goog.ui.list.Data('/api', 30);
+    var list = new goog.ui.List(data);
     list.decorate(document.getElementById('my-list'));
   </script>
 

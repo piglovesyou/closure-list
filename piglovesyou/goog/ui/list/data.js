@@ -42,7 +42,9 @@ goog.ui.list.Data = function(url, opt_totalRowCount, opt_keepUpdateTotal) {
   this.root_.add(this.rows_);
 
   dm.addDataSource(this.root_);
-  // dm.addListener(goog.bind(this.handleDataChange_, this), '$' + this.getId() + '/...');
+
+  // Monitor a ds a list.Data belongs to.
+  dm.addListener(goog.bind(this.exportEvent, this), '$' + this.getId() + '/...');
 };
 goog.inherits(goog.ui.list.Data, goog.events.EventTarget);
 
@@ -51,8 +53,7 @@ goog.inherits(goog.ui.list.Data, goog.events.EventTarget);
  * @enum {string}
  */
 goog.ui.list.Data.EventType = {
-  UPDATE_TOTAL: 'updatetotal',
-  UPDATE_PAGE: 'updatepage'
+  UPDATE_TOTAL: 'updatetotal'
 };
 
 
@@ -179,16 +180,32 @@ goog.ui.list.Data.prototype.getTotal = function() {
 };
 
 
+goog.ui.list.Data.prototype.exportEvent = function(path) {
+  var type;
+  if (goog.string.endsWith(path, '/total')) {
+    type = goog.ui.list.Data.EventType.UPDATE_TOTAL;
+  }
+  if (type) {
+    this.dispatchEvent({
+      type: type,
+      total: goog.ds.Expr.create(path).getNode()
+    });
+  }
+};
+
+
 /**
  * @param {goog.math.Range} range.
  * @return {goog.result.Result} .
  */
-goog.ui.list.Data.prototype.getRows = function(from, count) {
+goog.ui.list.Data.prototype.promiseRows = function(from, count) {
   var me = this;
+
   var collected = [];
+  var iter = goog.iter.range(from, from + count);
   var result = new goog.result.SimpleResult();
 
-  if (goog.iter.every(goog.iter.range(from, from + count), function(count) {
+  if (goog.iter.every(iter, function(count) {
     var row = me.rows_.get(goog.ui.list.Data.RowNodeNamePrefix + count);
     if (row) {
       collected.push(row);
@@ -199,12 +216,15 @@ goog.ui.list.Data.prototype.getRows = function(from, count) {
     result.setValue(collected);
   } else {
     collected = [];
-    var x = goog.labs.net.xhr.getJson(me.buildUrl(from, count));
-    x.wait(function(x) {
+    goog.labs.net.xhr.getJson(me.buildUrl(from, count)).wait(function(x) {
       // Handle network error
       var json = x.getValue();
       if (me.keepUpdateTotal_) {
-        me.total_.set(goog.getObjectByName(me.objectNameTotalInJson_, json));
+        var lastTotal = me.total_.get();
+        var newTotal = goog.getObjectByName(me.objectNameTotalInJson_, json);
+        if (lastTotal != newTotal) {
+          me.total_.set(newTotal);
+        }
       }
       var rows = goog.getObjectByName(me.objectNameRowsInJson_, json);
       if (!goog.array.isEmpty(rows)) {
@@ -228,15 +248,24 @@ goog.ui.list.Data.prototype.getRows = function(from, count) {
 
 /**
  * @param {number} index .
+ * @return {?goog.ds.FastDataNode} .
+ */
+goog.ui.list.Data.prototype.getRowByIndex = function(index) {
+  return this.rows_.get(goog.ui.list.Data.RowNodeNamePrefix + index);
+};
+
+
+/**
+ * @param {number} index .
  * @param {number} count .
  * @return {string} .
  * @protected
  * @suppress {underscore}
  */
-goog.ui.list.Data.prototype.buildUrl = function(index, count) {
+goog.ui.list.Data.prototype.buildUrl = function(from, count) {
   var url = goog.Uri.parse(this.url_);
+  url.setParameterValue(this.offsetParamKey_, from);
   url.setParameterValue(this.countParamKey_, count);
-  url.setParameterValue(this.offsetParamKey_, index * count);
   return url.toString();
 };
 
@@ -281,16 +310,16 @@ goog.ui.list.Data.SortedNodeList.prototype.getDataName = function() {
 
 
 
-// Test.
-var data = new goog.ui.list.Data('/api');
-function go() {
-  var r = data.getRows(0, 4);
-  r.wait(function(r) {
-    console.log(r.getValue());
-    console.log(data.getTotal());
-  });
-}
-go();
-setTimeout(go, 2000);
+// // Test.
+// var data = new goog.ui.list.Data('/api');
+// function go() {
+//   var r = data.getRows(0, 4);
+//   r.wait(function(r) {
+//     console.log(r.getValue());
+//     console.log(data.getTotal());
+//   });
+// }
+// go();
+// setTimeout(go, 2000);
 
 
