@@ -9,27 +9,27 @@ goog.require('goog.result.SimpleResult');
 
 
 /**
- * @param {string} uri Through which thousandrows interacts with a server
+ * @param {string} url Through which thousandrows interacts with a server
  *    by xhr. Also it is used as request id of xhr.
  * @param {number=} opt_totalRowCount .
- * @param {boolean=} opt_updateTotalWithJson .
+ * @param {boolean=} opt_keepUpdateTotal .
  * @param {goog.net.XhrManager=} opt_xhrManager .
  * @constructor
  * @extends {goog.events.EventTarget}
  */
-goog.ui.list.Data = function(uri,
-    opt_totalRowCount, opt_updateTotalWithJson, opt_xhrManager) {
+goog.ui.list.Data = function(url, opt_totalRowCount, opt_keepUpdateTotal) {
 
   goog.base(this);
 
-  this.uri_ = uri;
-  // this.updateTotalWithJson_ = !!opt_updateTotalWithJson;
+  this.url_ = url;
+  this.keepUpdateTotal_ = goog.isDef(opt_keepUpdateTotal) ? opt_keepUpdateTotal : true;
 
   var dm = goog.ds.DataManager.getInstance();
   this.root_ = new goog.ds.FastDataNode({}, this.getId());
 
-  var total = goog.isNumber(opt_totalRowCount) ? opt_totalRowCount : -1;
-  this.total_ = new goog.ds.PrimitiveFastDataNode(total, 'total', this.root_);
+  this.total_ = new goog.ds.PrimitiveFastDataNode(
+      goog.isNumber(opt_totalRowCount) ? opt_totalRowCount : -1,
+      'total', this.root_);
   this.root_.add(this.total_);
 
   this.rows_ = new goog.ui.list.Data.SortedNodeList('rows', function(newone, oldone) {
@@ -67,9 +67,15 @@ goog.ui.list.Data.prototype.ds_;
 
 /**
  * @type {string}
+ */
+goog.ui.list.Data.prototype.id_;
+
+
+/**
+ * @type {string}
  * @private
  */
-goog.ui.list.Data.prototype.countParamKey_ = 'size';
+goog.ui.list.Data.prototype.countParamKey_ = 'count';
 
 
 /**
@@ -174,38 +180,33 @@ goog.ui.list.Data.prototype.getTotal = function() {
 
 
 /**
- * @type {string}
- */
-goog.ui.list.Data.prototype.id_;
-
-
-/**
  * @param {goog.math.Range} range.
  * @return {goog.result.Result} .
  */
 goog.ui.list.Data.prototype.getRows = function(from, count) {
   var me = this;
   var collected = [];
+  var result = new goog.result.SimpleResult();
 
-  var rv = goog.iter.every(goog.iter.range(from, from + count), function(count) {
+  if (goog.iter.every(goog.iter.range(from, from + count), function(count) {
     var row = me.rows_.get(goog.ui.list.Data.RowNodeNamePrefix + count);
     if (row) {
       collected.push(row);
       return true;
     }
     return false;
-  });
-
-  var result = new goog.result.SimpleResult();
-  if (rv) {
+  })) {
     result.setValue(collected);
   } else {
+    collected = [];
     var x = goog.labs.net.xhr.getJson(me.buildUrl(from, count));
-    goog.array.clear(collected);
     x.wait(function(x) {
+      // Handle network error
       var json = x.getValue();
-      me.total_.set(goog.getObjectByName('total', json));
-      var rows = collected = goog.getObjectByName('items', json);
+      if (me.keepUpdateTotal_) {
+        me.total_.set(goog.getObjectByName(me.objectNameTotalInJson_, json));
+      }
+      var rows = goog.getObjectByName(me.objectNameRowsInJson_, json);
       if (!goog.array.isEmpty(rows)) {
         goog.iter.reduce(goog.iter.range(from, from + count), function(i, rowIndex) {
           var row = rows[i];
@@ -233,10 +234,10 @@ goog.ui.list.Data.prototype.getRows = function(from, count) {
  * @suppress {underscore}
  */
 goog.ui.list.Data.prototype.buildUrl = function(index, count) {
-  var uri = goog.Uri.parse(this.uri_);
-  uri.setParameterValue(this.countParamKey_, count);
-  uri.setParameterValue(this.offsetParamKey_, index * count);
-  return uri.toString();
+  var url = goog.Uri.parse(this.url_);
+  url.setParameterValue(this.countParamKey_, count);
+  url.setParameterValue(this.offsetParamKey_, index * count);
+  return url.toString();
 };
 
 
@@ -253,6 +254,7 @@ goog.ui.list.Data.prototype.disposeInternal = function() {
   this.ds_ = null;
   goog.base(this, 'disposeInternal');
 };
+
 
 
 /**
@@ -279,15 +281,16 @@ goog.ui.list.Data.SortedNodeList.prototype.getDataName = function() {
 
 
 
-// // Test.
-// var data = new goog.ui.list.Data('/api');
-// function go() {
-//   var r = data.getRows(0, 4);
-//   r.wait(function(r) {
-//     console.log(r.getValue());
-//   });
-// }
-// go();
-// setTimeout(go, 2000);
+// Test.
+var data = new goog.ui.list.Data('/api');
+function go() {
+  var r = data.getRows(0, 4);
+  r.wait(function(r) {
+    console.log(r.getValue());
+    console.log(data.getTotal());
+  });
+}
+go();
+setTimeout(go, 2000);
 
 

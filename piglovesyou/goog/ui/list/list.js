@@ -21,6 +21,7 @@ goog.require('goog.iter');
 goog.require('goog.math.Range');
 goog.require('goog.net.XhrManager');
 goog.require('goog.ui.Component');
+goog.require('goog.ui.list.Data');
 
 
 
@@ -29,11 +30,14 @@ goog.require('goog.ui.Component');
 
 /**
  * @constructor
+ * @param {goog.ui.list.Data} data .
  * @param {goog.dom.DomHelper=} opt_domHelper .
  * @extends {goog.ui.Component}
  */
-goog.ui.List = function(opt_domHelper) {
+goog.ui.List = function(data, opt_domHelper) {
   goog.base(this, opt_domHelper);
+
+  this.data = data;
 
   this.rowHeight = 60;
   this.rowCountPerPage = 8;
@@ -89,6 +93,7 @@ goog.ui.List.prototype.enterDocument = function() {
 };
 
 
+/***/
 goog.ui.List.prototype.redraw = function() {
   var dh = this.getDomHelper();
   var element = this.getElement();
@@ -119,12 +124,16 @@ goog.ui.List.prototype.redraw = function() {
   this.lastRange = range;
 
   var concreateContentHeight = this.calcConcreteRowCount(range) * this.rowHeight;
+  this.removeChildren(true); // Yeah, we can not to remove them every time. But how?
 
-  this.removeChildren(true);
+  // In short, we are creating a virtual content, which contains a top margin,
+  // a real dom content and a bottom margin. These three's height always comes to
+  // rowHeight * total, so that a browser native scrollbar indicates real size and position.
   content.style.paddingTop = range.start * this.pageHeight + 'px';
   content.style.paddingBottom =
       (this.rowHeight * this.totalRows) - range.start * this.pageHeight - concreateContentHeight + 'px';
   // content.style.height = concreateContentHeight + 'px';
+
   dh.append(content,
       this.createPage(range.start),
       isEdge ? null : this.createPage(range.end));
@@ -143,7 +152,7 @@ goog.ui.List.prototype.calcConcreteRowCount = function(range) {
 
 goog.ui.List.prototype.getRowCountInPage = function(pageIndex) {
   return pageIndex == this.lastPageIndex ? this.lastPageRows : this.rowCountPerPage;
-}
+};
 
 
 /**
