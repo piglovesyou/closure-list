@@ -47,7 +47,8 @@ app.get('/api', function(req, res) {
 
 
 
-app.listen(1337, function() {
-  console.log('Ready.');
+var port = 1337;
+app.listen(port, function() {
+  console.log('Ready on', port);
 });
 

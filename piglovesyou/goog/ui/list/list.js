@@ -50,7 +50,7 @@ goog.ui.list.RowNodeNamePrefix = goog.ui.list.Data.RowNodeNamePrefix;
 
 
 goog.ui.List.prototype.updateParamsInternal = function() {
-  console.log('updateParamsInternal', this.data.getTotal());
+  // console.log('updateParamsInternal', this.data.getTotal());
   this.lastPageIndex = Math.ceil(this.data.getTotal() / this.rowCountPerPage) - 1;
   this.pageHeight = this.rowHeight * this.rowCountPerPage;
   this.lastPageRows = this.data.getTotal() % this.rowCountPerPage;

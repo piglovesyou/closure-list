@@ -195,6 +195,7 @@ goog.ui.list.Data.prototype.exportEvent = function(path) {
 
 
 /**
+ * TODO:
  * @param {goog.math.Range} range.
  * @return {goog.result.Result} .
  */
@@ -215,8 +216,10 @@ goog.ui.list.Data.prototype.promiseRows = function(from, count) {
   })) {
     result.setValue(collected);
   } else {
-    collected = [];
-    goog.labs.net.xhr.getJson(me.buildUrl(from, count)).wait(function(x) {
+    var partialFrom = from + collected.length;
+    var partialCount = count - collected.length;
+    // TODO: Maybe we should also trim a partialCount from right (check existing descending).
+    goog.labs.net.xhr.getJson(me.buildUrl(partialFrom, partialCount)).wait(function(x) {
       // Handle network error
       var json = x.getValue();
       if (me.keepUpdateTotal_) {
@@ -226,15 +229,15 @@ goog.ui.list.Data.prototype.promiseRows = function(from, count) {
           me.total_.set(newTotal);
         }
       }
-      var rows = goog.getObjectByName(me.objectNameRowsInJson_, json);
-      if (!goog.array.isEmpty(rows)) {
-        goog.iter.reduce(goog.iter.range(from, from + count), function(i, rowIndex) {
-          var row = rows[i];
+      var items = goog.getObjectByName(me.objectNameRowsInJson_, json);
+      if (!goog.array.isEmpty(items)) {
+        goog.iter.reduce(goog.iter.range(partialFrom, partialFrom + partialCount), function(i, rowIndex) {
+          var row = items[i];
           if (row) {
             var node = goog.ds.FastDataNode.fromJs(row,
                 goog.ui.list.Data.RowNodeNamePrefix + rowIndex, me.rows_);
             me.rows_.add(node);
-            collected[i] = node;
+            collected.push(node);
           }
           return ++i;
         }, 0);
