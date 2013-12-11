@@ -83,6 +83,12 @@ goog.ui.List.prototype.canDecorate = function(element) {
 };
 
 
+goog.ui.List.prototype.updateVirualSizing = function(rowCount) {
+  this.contentEl.style.paddingTop = this.lastRange.start * this.pageHeight + 'px';
+  this.contentEl.style.paddingBottom =
+      (this.rowHeight * this.data.getTotal()) - this.lastRange.start * this.pageHeight - rowCount * this.rowHeight + 'px';
+};
+
 
 /** @inheritDoc */
 goog.ui.List.prototype.enterDocument = function() {
@@ -92,9 +98,15 @@ goog.ui.List.prototype.enterDocument = function() {
   var element = this.getElement();
 
   eh.listen(element, 'scroll', this.redraw)
-    .listen(this.data, goog.ui.list.Data.EventType.UPDATE_TOTAL, this.updateParamsInternal);
+    .listen(this.data, goog.ui.list.Data.EventType.UPDATE_TOTAL, this.handleTotalUpdate_);
   this.redraw();
 
+};
+
+
+goog.ui.List.prototype.handleTotalUpdate_ = function(e) {
+  this.updateParamsInternal();
+  this.updateVirualSizing(this.getChildCount());
 };
 
 
@@ -132,15 +144,13 @@ goog.ui.List.prototype.redraw = function() {
     return count + this.getRowCountInPage(i);
   }, 0, this);
 
-  var concreateContentHeight = concreteRowCount * this.rowHeight;
+  // var concreateContentHeight = concreteRowCount * this.rowHeight;
   this.removeChildren(true); // Yeah, we can not to remove them every time. But how?
 
   // In short, we are creating a virtual content, which contains a top margin,
   // a real dom content and a bottom margin. These three's height always comes to
   // rowHeight * total, so that a browser native scrollbar indicates real size and position.
-  content.style.paddingTop = range.start * this.pageHeight + 'px';
-  content.style.paddingBottom =
-      (this.rowHeight * this.data.getTotal()) - range.start * this.pageHeight - concreateContentHeight + 'px';
+  this.updateVirualSizing(concreteRowCount);
   // content.style.height = concreateContentHeight + 'px';
 
   var pageOnTop = this.createPage(range.start);
@@ -241,7 +251,7 @@ goog.ui.List.Item.prototype.createDom = function() {
 /**
  * @param {goog.ds.FastDataNode} data .
  */
-goog.ui.List.Item.prototype.renderContent= function(data) {
+goog.ui.List.Item.prototype.renderContent = function(data) {
   this.getElement().innerHTML = data.id + ' ' + data.title;
 };
 

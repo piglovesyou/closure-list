@@ -186,10 +186,7 @@ goog.ui.list.Data.prototype.exportEvent = function(path) {
     type = goog.ui.list.Data.EventType.UPDATE_TOTAL;
   }
   if (type) {
-    this.dispatchEvent({
-      type: type,
-      total: goog.ds.Expr.create(path).getNode()
-    });
+    this.dispatchEvent(type);
   }
 };
 
