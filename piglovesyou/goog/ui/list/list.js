@@ -17,7 +17,6 @@ goog.require('goog.async.Delay');
 goog.require('goog.ds.DataManager');
 goog.require('goog.ds.FastDataNode');
 goog.require('goog.ds.JsDataSource');
-goog.require('goog.iter');
 goog.require('goog.math.Range');
 goog.require('goog.net.XhrManager');
 goog.require('goog.ui.Component');
@@ -140,12 +139,15 @@ goog.ui.List.prototype.redraw = function() {
   }
   this.lastRange = range;
 
-  var concreteRowCount = goog.iter.reduce(goog.iter.range(range.start, range.end + 1), function(count, i) {
-    return count + this.getRowCountInPage(i);
-  }, 0, this);
-
-  // var concreateContentHeight = concreteRowCount * this.rowHeight;
   this.removeChildren(true); // Yeah, we can not to remove them every time. But how?
+
+  var concreteRowCount = 0;
+  var appendArgs = [content];
+  for (var i = range.start; i < range.end + 1; i++) {
+    var count = this.getRowCountInPage(i);
+    appendArgs.push(this.createPage(i, count));
+    concreteRowCount += count;
+  }
 
   // In short, we are creating a virtual content, which contains a top margin,
   // a real dom content and a bottom margin. These three's height always comes to
@@ -153,13 +155,9 @@ goog.ui.List.prototype.redraw = function() {
   this.updateVirualSizing(concreteRowCount);
   // content.style.height = concreateContentHeight + 'px';
 
-  var pageOnTop = this.createPage(range.start);
-  var pageOnBottom = isEdge ? null : this.createPage(range.end);
-
   this.data.promiseRows(range.start * this.rowCountPerPage, concreteRowCount)
     .wait(goog.bind(this.onResolved, this));
-
-  dh.append(content, pageOnTop, pageOnBottom);
+  dh.append.apply(dh, appendArgs);
   this.forEachChild(function(child) {
     child.enterDocument();
   });
@@ -182,14 +180,14 @@ goog.ui.List.prototype.getRowCountInPage = function(pageIndex) {
 
 
 /**
- * @param {number} index .
+ * @param {number} index The page index.
  * @return {Node} .
  */
-goog.ui.List.prototype.createPage = function(index) {
+goog.ui.List.prototype.createPage = function(index, rowCount) {
   var dh = this.getDomHelper();
   var page = dh.getDocument().createDocumentFragment();
   var start = index * this.rowCountPerPage;
-  var end = start + this.getRowCountInPage(index);
+  var end = start + rowCount;
   for (var i = start; i < end; i++) {
     var row = new goog.ui.List.Item(i, this.rowHeight);
     row.createDom();
