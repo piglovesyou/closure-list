@@ -40,13 +40,14 @@ case $1 in
         $CLOSURELIBRARY_DIR/closure/bin/build/closurebuilder.py \
         --root=$CLOSURELIBRARY_DIR \
         --root=piglovesyou \
-        --namespace="goog.ui.List" \
+        --namespace="example" \
         --compiler_jar=${CLOSURECOMPILER_DIR}compiler.jar \
-        --compiler_flags="--externs=extern.js" \
         --compiler_flags="--compilation_level=ADVANCED_OPTIMIZATIONS" \
         --compiler_flags="--warning_level=VERBOSE" \
         --output_mode=compiled \
+        ./export.js \
         > min.js
+#         --compiler_flags="--debug=true" \
         ;;
 
     *)

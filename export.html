@@ -1,0 +1,67 @@
+<!--
+ * @license
+ * Copyright (c) 2012 Soichi Takamura (http://stakam.net/)
+ *
+ * Dual licensed under the MIT and GPL licenses:
+ *   http://www.opensource.org/licenses/mit-license.php
+ *   http://www.gnu.org/licenses/gpl.html
+ -->
+
+<!DOCTYPE HTML>
+<html>
+<head>
+	<meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+	<title>goog.ui.List</title>
+  <link rel="stylesheet" href="/piglovesyou/goog/css/list.css" />
+
+  <style type="text/css">
+    body {
+      margin: 10%;
+      color: #4d4e6d;
+    }
+    .my-list {
+      /* width: 300px; */
+      height: 350px;
+      border: 2px #1e7cc1 solid;
+      padding: 6px;
+      
+      overflow: auto;
+      -webkit-overflow-scrolling:touch;
+    }
+    .my-list-container > div {
+      /* height: 60px */
+      line-height: 60px;
+      padding: 0 10px;
+      border-bottom: 6px white solid;
+      box-sizing: border-box;
+      background: #e9edf1;
+      color: #9c999f;
+    }
+    .my-list-container > div:last-child {
+      border-bottom: none;
+    }
+    .my-list-container > div:hover {
+      background: #c5d6ed;
+    }
+  </style>
+
+</head>
+<body>
+
+  <h1>goog.ui.List</h1>
+
+  <div class="my-list">
+    <div class="my-list-container"></div>
+  </div>
+  <div class="my-list-totalmsg"></div>
+
+  <script src="min.js"></script>
+  <script>
+    example(
+      document.querySelector('.my-list'),
+      document.querySelector('.my-list-totalmsg'));
+  </script>
+
+</body>
+</html>

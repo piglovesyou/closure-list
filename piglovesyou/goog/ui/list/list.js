@@ -48,6 +48,7 @@ goog.ui.List = function(data, opt_rowCountPerPage, opt_domHelper) {
   this.updateParamsInternal();
 };
 goog.inherits(goog.ui.List, goog.ui.Component);
+goog.exportSymbol('goog.ui.List', goog.ui.List);
 
 
 /** @type {string} */

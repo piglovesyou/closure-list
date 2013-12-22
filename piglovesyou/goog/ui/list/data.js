@@ -3,6 +3,9 @@ goog.provide('goog.ui.list.Data');
 goog.provide('goog.ui.list.Data.Event');
 
 
+goog.require('goog.ds.FastDataNode');
+goog.require('goog.ds.PrimitiveFastDataNode');
+goog.require('goog.ds.SortedNodeList');
 goog.require('goog.events.EventTarget');
 goog.require('goog.labs.net.xhr');
 goog.require('goog.result.SimpleResult');
@@ -47,7 +50,7 @@ goog.ui.list.Data = function(url, opt_totalRowCount, opt_keepTotalUptodate) {
 
   /**
    * @private
-   * @type {goog.ds.DataNodeList}
+   * @type {goog.ui.list.Data.SortedNodeList}
    */
   this.rows_ =
       new goog.ui.list.Data.SortedNodeList('rows', function(newone, oldone) {
