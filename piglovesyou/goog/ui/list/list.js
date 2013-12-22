@@ -43,7 +43,7 @@ goog.ui.List = function(data, opt_rowCountPerPage, opt_domHelper) {
 
   /** @type {number} */
   this.rowCountPerPage = goog.isNumber(opt_rowCountPerPage) ?
-      opt_rowCountPerPage8 : 25;
+      opt_rowCountPerPage : 25;
 
   this.updateParamsInternal();
 };

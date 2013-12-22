@@ -1,5 +1,4 @@
 .DS_Store
-closure
-closure-library-read-only
-closure-compiler
-compiled/*
+/closure
+/libs
+/compiled
