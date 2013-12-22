@@ -80,13 +80,25 @@ goog.ui.List.prototype.decorateInternal = function(element) {
   goog.base(this, 'decorateInternal', element);
 
   this.elementHeight = goog.style.getContentBoxSize(element).height;
-  this.contentEl = this.getElementByClass('my-list-container');
+  this.contentEl = this.getElementByClass('goog-list-container');
+};
+
+
+/** @inheritDoc */
+goog.ui.List.prototype.createDom = function() {
+  var dh = this.getDomHelper();
+  var element = dh.createDom('div', 'goog-list',
+    this.contentEl = dh.createDom('div', 'goog-list-container'));
+  this.setElementInternal(element);
+  this.elementHeight = goog.style.getContentBoxSize(element).height;
 };
 
 
 /** @inheritDoc */
 goog.ui.List.prototype.canDecorate = function(element) {
-  if (element) {
+  if (element &&
+      goog.dom.classes.has(element, 'goog-list') &&
+      goog.dom.getElementByClass('goog-list-container', element)) {
     return true;
   }
   return false;
