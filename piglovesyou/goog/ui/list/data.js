@@ -9,22 +9,35 @@ goog.require('goog.result.SimpleResult');
 
 
 /**
- * @param {string} url Through which thousandrows interacts with a server
- *    by xhr. Also it is used as request id of xhr.
+ * @param {string} url .
  * @param {number=} opt_totalRowCount .
- * @param {boolean=} opt_keepUpdateTotal .
- * @param {goog.net.XhrManager=} opt_xhrManager .
+ * @param {boolean=} opt_keepTotalUptodate .
  * @constructor
  * @extends {goog.events.EventTarget}
  */
-goog.ui.list.Data = function(url, opt_totalRowCount, opt_keepUpdateTotal) {
+goog.ui.list.Data = function(url, opt_totalRowCount, opt_keepTotalUptodate) {
 
   goog.base(this);
 
+  /**
+   * @type {string}
+   * @private
+   */
   this.url_ = url;
-  this.keepUpdateTotal_ = goog.isDef(opt_keepUpdateTotal) ? opt_keepUpdateTotal : true;
+
+  /**
+   * @private
+   * @type {string}
+   */
+  this.keepTotalUptodate_ =
+      goog.isDef(opt_keepTotalUptodate) ? opt_keepTotalUptodate : true;
 
   var dm = goog.ds.DataManager.getInstance();
+
+  /**
+   * @private
+   * @type {goog.ds.DataNode}
+   */
   this.root_ = new goog.ds.FastDataNode({}, this.getId());
 
   this.total_ = new goog.ds.PrimitiveFastDataNode(
@@ -32,7 +45,12 @@ goog.ui.list.Data = function(url, opt_totalRowCount, opt_keepUpdateTotal) {
       'total', this.root_);
   this.root_.add(this.total_);
 
-  this.rows_ = new goog.ui.list.Data.SortedNodeList('rows', function(newone, oldone) {
+  /**
+   * @private
+   * @type {goog.ds.DataNodeList}
+   */
+  this.rows_ =
+      new goog.ui.list.Data.SortedNodeList('rows', function(newone, oldone) {
     var newNodeName = newone.getDataName();
     var oldNodeName = oldone.getDataName();
     return newNodeName < oldNodeName ? -1 :
@@ -44,7 +62,8 @@ goog.ui.list.Data = function(url, opt_totalRowCount, opt_keepUpdateTotal) {
   dm.addDataSource(this.root_);
 
   // Monitor a ds a list.Data belongs to.
-  dm.addListener(goog.bind(this.exportEvent, this), '$' + this.getId() + '/...');
+  dm.addListener(
+      goog.bind(this.handleDataChanged, this), '$' + this.getId() + '/...');
 };
 goog.inherits(goog.ui.list.Data, goog.events.EventTarget);
 
@@ -57,6 +76,7 @@ goog.ui.list.Data.EventType = {
 };
 
 
+/** @type {string} */
 goog.ui.list.Data.RowNodeNamePrefix = 'r';
 
 
@@ -73,6 +93,7 @@ goog.ui.list.Data.prototype.id_;
 
 
 /**
+ * Used as a request parameter to represent how much rows we want.
  * @type {string}
  * @private
  */
@@ -88,14 +109,15 @@ goog.ui.list.Data.prototype.getCountParamKey = function() {
 
 
 /**
- * @param {string} .
+ * @param {string} key .
  */
-goog.ui.list.Data.prototype.setCountParamKey = function() {
-  return this.countParamKey_;
+goog.ui.list.Data.prototype.setCountParamKey = function(key) {
+  this.countParamKey_ = key;
 };
 
 
 /**
+ * Used as a request parameter to represent from what index of rows we want.
  * @type {string}
  * @private
  */
@@ -111,14 +133,29 @@ goog.ui.list.Data.prototype.getOffsetParamKey = function() {
 
 
 /**
- * @param {string} .
+ * @param {string} key .
  */
-goog.ui.list.Data.prototype.setOffsetParamKey = function() {
-  return this.offsetParamKey_;
+goog.ui.list.Data.prototype.setOffsetParamKey = function(key) {
+  this.offsetParamKey_ = key;
 };
 
 
 /**
+ * Used as "path" to rows total value in a responded JSON.
+ * So when you get a JSON from a server like:
+ *    {
+ *      results: {
+ *        total: 888,
+ *        items: [
+ *          {id: 'x', title, 'xxx'},
+ *          {id: 'y', title, 'yyy'},
+ *          {id: 'z', title, 'zzz'}
+ *        ]
+ *      },
+ *      error: null
+ *    }
+ * Then, set 'results.total' as a path to the value.
+ *
  * @type {string}
  * @private
  */
@@ -134,7 +171,7 @@ goog.ui.list.Data.prototype.getObjectNameTotalInJson = function() {
 
 
 /**
- * @param {string} .
+ * @param {string} objName .
  */
 goog.ui.list.Data.prototype.setObjectNameTotalInJson = function(objName) {
   this.objectNameTotalInJson_ = objName;
@@ -142,6 +179,21 @@ goog.ui.list.Data.prototype.setObjectNameTotalInJson = function(objName) {
 
 
 /**
+ * Used as "path" to rows' array in a responded JSON.
+ * So when you get a JSON from a server like:
+ *    {
+ *      results: {
+ *        total: 888,
+ *        items: [
+ *          {id: 'x', title, 'xxx'},
+ *          {id: 'y', title, 'yyy'},
+ *          {id: 'z', title, 'zzz'}
+ *        ]
+ *      },
+ *      error: null
+ *    }
+ * Then, set 'results.items' as a path to the value.
+ *
  * @type {string}
  * @private
  */
@@ -157,7 +209,7 @@ goog.ui.list.Data.prototype.getObjectNameRowsInJson = function() {
 
 
 /**
- * @param {string} .
+ * @param {string} objName .
  */
 goog.ui.list.Data.prototype.setObjectNameRowsInJson = function(objName) {
   this.objectNameRowsInJson_ = objName;
@@ -180,7 +232,11 @@ goog.ui.list.Data.prototype.getTotal = function() {
 };
 
 
-goog.ui.list.Data.prototype.exportEvent = function(path) {
+/**
+ * @protected
+ * @param {string} path .
+ */
+goog.ui.list.Data.prototype.handleDataChanged = function(path) {
   var type;
   if (goog.string.endsWith(path, '/total')) {
     type = goog.ui.list.Data.EventType.UPDATE_TOTAL;
@@ -193,8 +249,10 @@ goog.ui.list.Data.prototype.exportEvent = function(path) {
 
 /**
  * TODO:
- * @param {goog.math.Range} range.
- * @return {goog.result.Result} .
+ *
+ * @param {number} from .
+ * @param {number} count .
+ * @return {Object} .
  */
 goog.ui.list.Data.prototype.promiseRows = function(from, count) {
   var me = this;
@@ -215,11 +273,13 @@ goog.ui.list.Data.prototype.promiseRows = function(from, count) {
   } else {
     var partialFrom = from + collected.length;
     var partialCount = count - collected.length;
-    // TODO: Maybe we should also trim a partialCount from right (check existing descending).
-    goog.labs.net.xhr.getJson(me.buildUrl(partialFrom, partialCount)).wait(function(x) {
+    // TODO: Maybe we should trim a partialCount from
+    //   right as well (check existing descending).
+    goog.labs.net.xhr.getJson(me.buildUrl(partialFrom, partialCount))
+    .wait(function(x) {
       // Handle network error
       var json = x.getValue();
-      if (me.keepUpdateTotal_) {
+      if (me.keepTotalUptodate_) {
         var lastTotal = me.total_.get();
         var newTotal = goog.getObjectByName(me.objectNameTotalInJson_, json);
         if (lastTotal != newTotal) {
@@ -228,7 +288,8 @@ goog.ui.list.Data.prototype.promiseRows = function(from, count) {
       }
       var items = goog.getObjectByName(me.objectNameRowsInJson_, json);
       if (!goog.array.isEmpty(items)) {
-        goog.iter.reduce(goog.iter.range(partialFrom, partialFrom + partialCount), function(i, rowIndex) {
+        goog.iter.reduce(goog.iter.range(partialFrom,
+            partialFrom + partialCount), function(i, rowIndex) {
           var row = items[i];
           if (row) {
             var node = goog.ds.FastDataNode.fromJs(row,
@@ -256,7 +317,7 @@ goog.ui.list.Data.prototype.getRowByIndex = function(index) {
 
 
 /**
- * @param {number} index .
+ * @param {number} from .
  * @param {number} count .
  * @return {string} .
  * @protected
@@ -272,15 +333,10 @@ goog.ui.list.Data.prototype.buildUrl = function(from, count) {
 
 /** @inheritDoc */
 goog.ui.list.Data.prototype.disposeInternal = function() {
-  if (this.xhr_) {
-    goog.array.forEach(this.xhr_.getOutstandingRequestIds(), function(id) {
-      this.abort(id, true);
-    }, this.xhr_);
-    this.xhr_.dispose();
-    this.xhr_ = null;
-  }
   goog.ds.DataManager.getInstance().get().removeNode('$' + this.getId());
-  this.ds_ = null;
+  this.root_ = null;
+  this.total_ = null;
+  this.rows_ = null;
   goog.base(this, 'disposeInternal');
 };
 

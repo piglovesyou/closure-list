@@ -30,30 +30,40 @@ goog.require('goog.ui.list.Data');
 /**
  * @constructor
  * @param {goog.ui.list.Data} data .
+ * @param {number} opt_rowCountPerPage .
  * @param {goog.dom.DomHelper=} opt_domHelper .
  * @extends {goog.ui.Component}
  */
-goog.ui.List = function(data, opt_domHelper) {
+goog.ui.List = function(data, opt_rowCountPerPage, opt_domHelper) {
   goog.base(this, opt_domHelper);
 
   this.data = data;
 
   this.rowHeight = 60;
-  this.rowCountPerPage = 8;
+
+  /** @type {number} */
+  this.rowCountPerPage = goog.isNumber(opt_rowCountPerPage) ?
+      opt_rowCountPerPage8 : 25;
+
   this.updateParamsInternal();
 };
 goog.inherits(goog.ui.List, goog.ui.Component);
 
 
+/** @type {string} */
 goog.ui.list.RowNodeNamePrefix = goog.ui.list.Data.RowNodeNamePrefix;
 
 
+/***/
 goog.ui.List.prototype.updateParamsInternal = function() {
-  // console.log('updateParamsInternal', this.data.getTotal());
-  this.lastPageIndex = Math.ceil(this.data.getTotal() / this.rowCountPerPage) - 1;
+  this.lastPageIndex =
+      Math.ceil(this.data.getTotal() / this.rowCountPerPage) - 1;
   this.pageHeight = this.rowHeight * this.rowCountPerPage;
+
+  // Cache for a speed.
   this.lastPageRows = this.data.getTotal() % this.rowCountPerPage;
   if (this.lastPageRows == 0) this.lastPageRows = this.rowCountPerPage;
+
   this.lastRange = new goog.math.Range(-1, -1);
 };
 
@@ -82,10 +92,14 @@ goog.ui.List.prototype.canDecorate = function(element) {
 };
 
 
+/**
+ * @param {number} rowCount .
+ */
 goog.ui.List.prototype.updateVirualSizing = function(rowCount) {
-  this.contentEl.style.paddingTop = this.lastRange.start * this.pageHeight + 'px';
-  this.contentEl.style.paddingBottom =
-      (this.rowHeight * this.data.getTotal()) - this.lastRange.start * this.pageHeight - rowCount * this.rowHeight + 'px';
+  this.contentEl.style.paddingTop =
+      this.lastRange.start * this.pageHeight + 'px';
+  this.contentEl.style.paddingBottom = this.rowHeight * this.data.getTotal() -
+      this.lastRange.start * this.pageHeight - rowCount * this.rowHeight + 'px';
 };
 
 
@@ -97,12 +111,17 @@ goog.ui.List.prototype.enterDocument = function() {
   var element = this.getElement();
 
   eh.listen(element, 'scroll', this.redraw)
-    .listen(this.data, goog.ui.list.Data.EventType.UPDATE_TOTAL, this.handleTotalUpdate_);
+    .listen(this.data,
+        goog.ui.list.Data.EventType.UPDATE_TOTAL, this.handleTotalUpdate_);
   this.redraw();
 
 };
 
 
+/**
+ * @private
+ * @param {goog.events.Event} e .
+ */
 goog.ui.List.prototype.handleTotalUpdate_ = function(e) {
   this.updateParamsInternal();
   this.updateVirualSizing(this.getChildCount());
@@ -139,19 +158,20 @@ goog.ui.List.prototype.redraw = function() {
   }
   this.lastRange = range;
 
-  this.removeChildren(true); // Yeah, we can not to remove them every time. But how?
+  this.removeChildren(true); // We can not to remove them every time. But how?
 
   var concreteRowCount = 0;
   var appendArgs = [content];
   for (var i = range.start; i < range.end + 1; i++) {
-    var count = this.getRowCountInPage(i);
+    var count = this.calcRowCountInPage_(i);
     appendArgs.push(this.createPage(i, count));
     concreteRowCount += count;
   }
 
-  // In short, we are creating a virtual content, which contains a top margin,
-  // a real dom content and a bottom margin. These three's height always comes to
-  // rowHeight * total, so that a browser native scrollbar indicates real size and position.
+  // In short, we are creating a virtual content, which contains a top margin +
+  // a real dom content + a bottom margin. These three's height always comes
+  // to (rowHeight * total), so that a browser native scrollbar indicates
+  // a real size and position.
   this.updateVirualSizing(concreteRowCount);
   // content.style.height = concreateContentHeight + 'px';
 
@@ -164,6 +184,9 @@ goog.ui.List.prototype.redraw = function() {
 };
 
 
+/**
+ * @param {goog.result.SimpleResult} result .
+ */
 goog.ui.List.prototype.onResolved = function(result) {
   this.forEachChild(function(row) {
     var data = this.data.getRowByIndex(row.getIndex());
@@ -174,13 +197,23 @@ goog.ui.List.prototype.onResolved = function(result) {
 };
 
 
-goog.ui.List.prototype.getRowCountInPage = function(pageIndex) {
-  return pageIndex == this.lastPageIndex ? this.lastPageRows : this.rowCountPerPage;
+/**
+ * @private
+ * @param {number} pageIndex .
+ * @return {number} .
+ */
+goog.ui.List.prototype.calcRowCountInPage_ = function(pageIndex) {
+  var total = this.data.getTotal();
+  if (total < (pageIndex + 1) * this.rowCountPerPage) {
+    return total % this.rowCountPerPage;
+  }
+  return this.rowCountPerPage;
 };
 
 
 /**
  * @param {number} index The page index.
+ * @param {number} rowCount .
  * @return {Node} .
  */
 goog.ui.List.prototype.createPage = function(index, rowCount) {
@@ -221,28 +254,45 @@ goog.ui.List.prototype.disposeInternal = function() {
 
 /**
  * @constructor
+ * @param {number} index .
+ * @param {number} height .
  * @param {goog.dom.DomHelper=} opt_domHelper .
  * @extends {goog.ui.Component}
  */
 goog.ui.List.Item = function(index, height, opt_domHelper) {
   goog.base(this, opt_domHelper);
-  this.index = index;
-  this.height = height;
+
+  /**
+   * @private
+   * @type {number}
+   */
+  this.index_ = index;
+
+  /**
+   * @private
+   * @type {number}
+   */
+  this.height_ = height;
 };
 goog.inherits(goog.ui.List.Item, goog.ui.Component);
 
 
+/**
+ * @return {number} .
+ */
 goog.ui.List.Item.prototype.getIndex = function() {
-  return this.index;
+  return this.index_;
 };
 
 
 /** @inheritDoc */
 goog.ui.List.Item.prototype.createDom = function() {
   var dh = this.getDomHelper();
+  // XXX: This is kind of expensive process. We can relegate this
+  //  to a module user.
   this.setElementInternal(dh.createDom('div', {
-    style: 'height:' + this.height + 'px'
-  }, '' + this.index));
+    style: 'height:' + this.height_ + 'px'
+  }, '' + this.index_));
 };
 
 
