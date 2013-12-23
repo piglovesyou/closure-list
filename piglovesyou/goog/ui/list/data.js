@@ -9,6 +9,7 @@ goog.require('goog.ds.SortedNodeList');
 goog.require('goog.events.EventTarget');
 goog.require('goog.labs.net.xhr');
 goog.require('goog.result.SimpleResult');
+goog.require('goog.net.XhrManager');
 
 
 /**
@@ -18,7 +19,7 @@ goog.require('goog.result.SimpleResult');
  * @constructor
  * @extends {goog.events.EventTarget}
  */
-goog.ui.list.Data = function(url, opt_totalRowCount, opt_keepTotalUptodate) {
+goog.ui.list.Data = function(url, opt_totalRowCount, opt_keepTotalUptodate, opt_xhrManager) {
 
   goog.base(this);
 
@@ -35,6 +36,12 @@ goog.ui.list.Data = function(url, opt_totalRowCount, opt_keepTotalUptodate) {
   this.keepTotalUptodate_ =
       goog.isDef(opt_keepTotalUptodate) ? opt_keepTotalUptodate : true;
 
+  /**
+   * @private
+   * @type {goog.net.XhrManager}
+   */
+  this.xhr_ = opt_xhrManager || new goog.net.XhrManager;
+
   var dm = goog.ds.DataManager.getInstance();
 
   /**
@@ -43,8 +50,14 @@ goog.ui.list.Data = function(url, opt_totalRowCount, opt_keepTotalUptodate) {
    */
   this.root_ = new goog.ds.FastDataNode({}, this.getId());
 
+  /**
+   * Total count of rows in a list.
+   *
+   * @private
+   * @type {goog.ds.PrimitiveFastDataNode}
+   */
   this.total_ = new goog.ds.PrimitiveFastDataNode(
-      goog.isNumber(opt_totalRowCount) ? opt_totalRowCount : -1,
+      goog.isNumber(opt_totalRowCount) ? opt_totalRowCount : 50,
       'total', this.root_);
   this.root_.add(this.total_);
 
@@ -274,14 +287,17 @@ goog.ui.list.Data.prototype.promiseRows = function(from, count) {
   })) {
     result.setValue(collected);
   } else {
-    var partialFrom = from + collected.length;
-    var partialCount = count - collected.length;
     // TODO: Maybe we should trim a partialCount from
     //   right as well (check existing descending).
-    goog.labs.net.xhr.getJson(me.buildUrl(partialFrom, partialCount))
-    .wait(function(x) {
+    var partialFrom = from + collected.length;
+    var partialCount = count - collected.length;
+    var url = me.buildUrl(partialFrom, partialCount);
+
+    this.xhr_.send(url, url, null, null, null, null, function(e) {
       // Handle network error
-      var json = x.getValue();
+      // var json = x.getValue();
+      var json = e.target.getResponseJson();
+
       if (me.keepTotalUptodate_) {
         var lastTotal = me.total_.get();
         var newTotal = goog.getObjectByName(me.objectNameTotalInJson_, json);
@@ -289,6 +305,7 @@ goog.ui.list.Data.prototype.promiseRows = function(from, count) {
           me.total_.set(newTotal);
         }
       }
+
       var items = goog.getObjectByName(me.objectNameRowsInJson_, json);
       if (!goog.array.isEmpty(items)) {
         goog.iter.reduce(goog.iter.range(partialFrom,

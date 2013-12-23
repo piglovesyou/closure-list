@@ -41,7 +41,9 @@ goog.ui.List = function(data, opt_rowCountPerPage, opt_domHelper) {
 
   this.rowHeight = 60;
 
-  /** @type {number} */
+  /**
+   * @type {number}
+   */
   this.rowCountPerPage = goog.isNumber(opt_rowCountPerPage) ?
       opt_rowCountPerPage : 25;
 
