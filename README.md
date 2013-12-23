@@ -16,9 +16,7 @@ Lighter List UI for Pc and Mobile.
 ### Usage
 
 ```javascript
-var data = new goog.ui.list.Data(
-    '/api', // Url to request a remote JSON to
-    30);    // Item count per page in a JSON
+var data = new goog.ui.list.Data('/api') // Url to request a remote JSON to
 
 // Decorate example
 var list = new goog.ui.List(data);
