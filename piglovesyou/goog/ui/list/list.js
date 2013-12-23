@@ -9,7 +9,6 @@
 
 goog.provide('goog.ui.List');
 goog.provide('goog.ui.List.Item');
-goog.provide('goog.ui.List.Item.Renderer');
 
 goog.require('goog.Uri');
 goog.require('goog.array');
@@ -30,13 +29,14 @@ goog.require('goog.ui.list.Data');
 /**
  * @constructor
  * @param {goog.ui.list.Data} data .
- * @param {Function|goog.ui.List.Item} rowRenderer
+ * @param {Function|function(new:goog.ui.List.Item,
+ *         number, number, Function=, goog.dom.DomHelper=)} rowRenderer
  *    You can pass two types of params:
  *      - If it's function, used as a renderer which called in
  *        "renderContent" and takes 1 item argument from json.
  *      - If it's an instance of goog.ui.List.Item, we always generate a row
  *        by it. The class has to implement its own "renderContent" method.
- * @param {number} opt_rowCountPerPage Used as a request param.
+ * @param {number=} opt_rowCountPerPage Used as a request param.
  * @param {goog.dom.DomHelper=} opt_domHelper .
  * @extends {goog.ui.Component}
  */
@@ -55,7 +55,8 @@ goog.ui.List = function(data, rowRenderer, opt_rowCountPerPage, opt_domHelper) {
 
   /**
    * @private
-   * @type {goog.ui.List.Item}
+   * @type {function(new:goog.ui.List.Item,
+   *        number, number, Function=, goog.dom.DomHelper=)}
    */
   this.rowClassRef_;
 
@@ -66,10 +67,12 @@ goog.ui.List = function(data, rowRenderer, opt_rowCountPerPage, opt_domHelper) {
   this.rowRenderer_;
 
   if (rowRenderer instanceof goog.ui.List.Item) {
-    this.rowClassRef_ = rowRenderer;
+    this.rowClassRef_ = /**@type {function(new:goog.ui.List.Item,
+        number, number, Function=, goog.dom.DomHelper=)}*/(rowRenderer);
     this.rowRenderer_ = goog.isFunction;
   } else if (goog.isFunction(rowRenderer)) {
-    this.rowClassRef_ = goog.ui.List.Item;
+    this.rowClassRef_ = /**@type {function(new:goog.ui.List.Item,
+        number, number, Function=, goog.dom.DomHelper=)}*/(goog.ui.List.Item);
     this.rowRenderer_ = rowRenderer;
   } else {
     goog.asserts.fail('You need pass renderer or render class');
@@ -96,12 +99,6 @@ goog.ui.List.prototype.updateParamsInternal = function() {
   if (this.lastPageRows == 0) this.lastPageRows = this.rowCountPerPage;
 
   this.lastRange = new goog.math.Range(-1, -1);
-};
-
-
-/** @inheritDoc */
-goog.ui.List.prototype.createDom = function() {
-  goog.base(this, 'createDom');
 };
 
 

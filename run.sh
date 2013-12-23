@@ -44,6 +44,7 @@ case $1 in
         --compiler_jar=${CLOSURECOMPILER_DIR}compiler.jar \
         --compiler_flags="--compilation_level=ADVANCED_OPTIMIZATIONS" \
         --compiler_flags="--warning_level=VERBOSE" \
+        --compiler_flags="--js=${CLOSURELIBRARY_DIR}/closure/goog/deps.js" \
         --output_mode=compiled \
         ./export.js \
         > min.js

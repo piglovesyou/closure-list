@@ -1,6 +1,5 @@
 
 goog.provide('goog.ui.list.Data');
-goog.provide('goog.ui.list.Data.Event');
 
 
 goog.require('goog.ds.FastDataNode');
@@ -8,18 +7,20 @@ goog.require('goog.ds.PrimitiveFastDataNode');
 goog.require('goog.ds.SortedNodeList');
 goog.require('goog.events.EventTarget');
 goog.require('goog.labs.net.xhr');
-goog.require('goog.result.SimpleResult');
 goog.require('goog.net.XhrManager');
+goog.require('goog.result.SimpleResult');
 
 
 /**
  * @param {string} url .
  * @param {number=} opt_totalRowCount .
  * @param {boolean=} opt_keepTotalUptodate .
+ * @param {goog.net.XhrManager=} opt_xhrManager .
  * @constructor
  * @extends {goog.events.EventTarget}
  */
-goog.ui.list.Data = function(url, opt_totalRowCount, opt_keepTotalUptodate, opt_xhrManager) {
+goog.ui.list.Data = function(url,
+    opt_totalRowCount, opt_keepTotalUptodate, opt_xhrManager) {
 
   goog.base(this);
 
@@ -31,7 +32,7 @@ goog.ui.list.Data = function(url, opt_totalRowCount, opt_keepTotalUptodate, opt_
 
   /**
    * @private
-   * @type {string}
+   * @type {boolean}
    */
   this.keepTotalUptodate_ =
       goog.isDef(opt_keepTotalUptodate) ? opt_keepTotalUptodate : true;
@@ -244,7 +245,7 @@ goog.ui.list.Data.prototype.getId = function() {
  * @return {number} .
  */
 goog.ui.list.Data.prototype.getTotal = function() {
-  return this.total_.get();
+  return /**@type{number}*/(this.total_.get());
 };
 
 
@@ -293,7 +294,8 @@ goog.ui.list.Data.prototype.promiseRows = function(from, count) {
     var partialCount = count - collected.length;
     var url = me.buildUrl(partialFrom, partialCount);
 
-    this.xhr_.send(url, url, null, null, null, null, function(e) {
+    this.xhr_.send(url, url,
+        undefined, undefined, undefined, undefined, function(e) {
       // Handle network error
       // var json = x.getValue();
       var json = e.target.getResponseJson();
@@ -301,7 +303,7 @@ goog.ui.list.Data.prototype.promiseRows = function(from, count) {
       if (me.keepTotalUptodate_) {
         var lastTotal = me.total_.get();
         var newTotal = goog.getObjectByName(me.objectNameTotalInJson_, json);
-        if (lastTotal != newTotal) {
+        if (goog.isNumber(newTotal) && lastTotal != newTotal) {
           me.total_.set(newTotal);
         }
       }
@@ -329,7 +331,7 @@ goog.ui.list.Data.prototype.promiseRows = function(from, count) {
 
 /**
  * @param {number} index .
- * @return {?goog.ds.FastDataNode} .
+ * @return {?goog.ds.DataNode} .
  */
 goog.ui.list.Data.prototype.getRowByIndex = function(index) {
   return this.rows_.get(goog.ui.list.Data.RowNodeNamePrefix + index);
