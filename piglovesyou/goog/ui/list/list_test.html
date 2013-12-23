@@ -87,6 +87,7 @@
 
     goog.require('goog.json');
     goog.require('goog.dom');
+    goog.require('goog.Uri');
     goog.require('goog.testing.jsunit');
     goog.require('goog.testing.net.XhrIo');
     goog.require('goog.testing.net.XhrIoPool');
@@ -108,6 +109,9 @@
   var url = '/some/api';
   var total = 18;
   var perPage = 5;
+  var contentRenderer = function (data) {
+    return 'id: ' + data['id'] + '  title: ' + data['title'];
+  };
 
   var list, data, mockClock;
 
@@ -115,12 +119,14 @@
 
   //=========================================================================
   // Setup
+
   function setUp() {
     // Overwrite real classes
     goog.net.XhrIo = goog.testing.net.XhrIo;
     goog.net.XhrIoPool = goog.testing.net.XhrIoPool;
     mockClock = new goog.testing.MockClock(true);
   }
+
   function tearDown() {
     if (list) list.dispose();
     if (data) data.dispose();
@@ -135,53 +141,60 @@
   // Test cases
 
   function testDecorate() {
-
     sandbox.innerHTML =
       '<div class="goog-list">' +
         '<div class="goog-list-container"><\/div>' +
       '<\/div>';
     data = new goog.ui.list.Data('/api');
-    list = new goog.ui.List(data, 5);
+    list = new goog.ui.List(data, contentRenderer, 5);
     list.decorate(goog.dom.getElementByClass('goog-list', sandbox));
 
-    var xhrIo = data.xhr_.xhrPool_.getXhr();
-    setTimeout(function() {
-      xhrIo.simulateResponse(200, generateResponseText(0, 10));
+    onXhrRespond(function() {
       assert(list.getChildCount() == 10);
-    }, 1000);
-    mockClock.tick(2000);
-
+      assert(list.getChildAt(0).getIndex() == 0);
+    });
   }
 
   function testRender() {
-
     data = new goog.ui.list.Data('/api');
-    list = new goog.ui.List(data, 5);
+    list = new goog.ui.List(data, contentRenderer, 5);
     list.render(sandbox);
 
-    var xhrIo = data.xhr_.xhrPool_.getXhr();
-    setTimeout(function() {
-      xhrIo.simulateResponse(200, generateResponseText(0, 10));
+    onXhrRespond(function() {
       assert(list.getChildCount() == 10);
-    }, 1000);
-    mockClock.tick(2000);
-
+      assert(list.getChildAt(0).getIndex() == 0);
+    });
   }
-
 
 
 
   //=========================================================================
   // Utility methods
+
+  function onXhrRespond(fn) {
+    var xhrIo = data.xhr_.xhrPool_.getXhr();
+    var uri = goog.Uri.parse(xhrIo.getLastUri());
+    setTimeout(function() {
+      xhrIo.simulateResponse(200,
+          generateResponseText(
+              uri.getQueryData().get('offset'),
+              uri.getQueryData().get('count')));
+      fn();
+    }, 400);
+    mockClock.tick(500);
+  }
+
   function generateResponseText(offset, size) {
     return JSON.stringify(createResponse(offset, size));
   }
+
   function createResponse(offset, size) {
     return {
       total: total,
       items: createItems(offset, size)
     };
   }
+
   function createItems(offset, size) {
     var items = [];
     for (var i = offset; i < offset + size && i < total; i++) {

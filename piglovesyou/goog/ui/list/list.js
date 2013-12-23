@@ -30,11 +30,17 @@ goog.require('goog.ui.list.Data');
 /**
  * @constructor
  * @param {goog.ui.list.Data} data .
- * @param {number} opt_rowCountPerPage .
+ * @param {Function|goog.ui.List.Item} rowRenderer
+ *    You can pass two types of params:
+ *      - If it's function, used as a renderer which called in
+ *        "renderContent" and takes 1 item argument from json.
+ *      - If it's an instance of goog.ui.List.Item, we always generate a row
+ *        by it. The class has to implement its own "renderContent" method.
+ * @param {number} opt_rowCountPerPage Used as a request param.
  * @param {goog.dom.DomHelper=} opt_domHelper .
  * @extends {goog.ui.Component}
  */
-goog.ui.List = function(data, opt_rowCountPerPage, opt_domHelper) {
+goog.ui.List = function(data, rowRenderer, opt_rowCountPerPage, opt_domHelper) {
   goog.base(this, opt_domHelper);
 
   this.data = data;
@@ -46,6 +52,28 @@ goog.ui.List = function(data, opt_rowCountPerPage, opt_domHelper) {
    */
   this.rowCountPerPage = goog.isNumber(opt_rowCountPerPage) ?
       opt_rowCountPerPage : 25;
+
+  /**
+   * @private
+   * @type {goog.ui.List.Item}
+   */
+  this.rowClassRef_;
+
+  /**
+   * @private
+   * @type {Function}
+   */
+  this.rowRenderer_;
+
+  if (rowRenderer instanceof goog.ui.List.Item) {
+    this.rowClassRef_ = rowRenderer;
+    this.rowRenderer_ = goog.isFunction;
+  } else if (goog.isFunction(rowRenderer)) {
+    this.rowClassRef_ = goog.ui.List.Item;
+    this.rowRenderer_ = rowRenderer;
+  } else {
+    goog.asserts.fail('You need pass renderer or render class');
+  }
 
   this.updateParamsInternal();
 };
@@ -237,7 +265,7 @@ goog.ui.List.prototype.createPage = function(index, rowCount) {
   var start = index * this.rowCountPerPage;
   var end = start + rowCount;
   for (var i = start; i < end; i++) {
-    var row = new goog.ui.List.Item(i, this.rowHeight);
+    var row = new this.rowClassRef_(i, this.rowHeight, this.rowRenderer_, dh);
     row.createDom();
     dh.appendChild(page, row.getElement());
     this.addChild(row);
@@ -271,10 +299,11 @@ goog.ui.List.prototype.disposeInternal = function() {
  * @constructor
  * @param {number} index .
  * @param {number} height .
+ * @param {Function=} opt_renderer .
  * @param {goog.dom.DomHelper=} opt_domHelper .
  * @extends {goog.ui.Component}
  */
-goog.ui.List.Item = function(index, height, opt_domHelper) {
+goog.ui.List.Item = function(index, height, opt_renderer, opt_domHelper) {
   goog.base(this, opt_domHelper);
 
   /**
@@ -288,6 +317,11 @@ goog.ui.List.Item = function(index, height, opt_domHelper) {
    * @type {number}
    */
   this.height_ = height;
+
+  /**
+   * @private
+   */
+  this.renderer_ = opt_renderer || goog.nullFunction;
 };
 goog.inherits(goog.ui.List.Item, goog.ui.Component);
 
@@ -303,19 +337,21 @@ goog.ui.List.Item.prototype.getIndex = function() {
 /** @inheritDoc */
 goog.ui.List.Item.prototype.createDom = function() {
   var dh = this.getDomHelper();
-  // XXX: This is kind of expensive process. We can relegate this
-  //  to a module user.
+  // XXX: Adding height is kind of expensive process.
+  // We can relegate this to a module user.
   this.setElementInternal(dh.createDom('div', {
     style: 'height:' + this.height_ + 'px'
-  }, '' + this.index_));
+  }));
 };
 
 
 /**
+ * TODO: Accept renderer from outside.
+ *
  * @param {goog.ds.FastDataNode} data .
  */
 goog.ui.List.Item.prototype.renderContent = function(data) {
-  this.getElement().innerHTML = data.id + ' ' + data.title;
+  this.getElement().innerHTML = this.renderer_(data);
 };
 
 

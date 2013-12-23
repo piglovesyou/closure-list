@@ -15,31 +15,6 @@
 	<title>goog.ui.Scroller</title>
   <link rel="stylesheet" href="../css/list.css" />
 
-  <script src="../../../libs/closure-library/closure/goog/base.js"></script>
-  <script type="text/javascript">
-
-goog.require('goog.Uri');
-goog.require('goog.array');
-goog.require('goog.async.Delay');
-goog.require('goog.ds.DataManager');
-goog.require('goog.ds.FastDataNode');
-goog.require('goog.ds.JsDataSource');
-goog.require('goog.iter');
-goog.require('goog.math.Range');
-goog.require('goog.net.XhrManager');
-goog.require('goog.ui.Component');
-
-goog.require('goog.result.DependentResult');
-goog.require('goog.result.Result');
-goog.require('goog.result.SimpleResult');
-
-  </script>
-
-  <script src="../../../libs/closure-library/closure/goog/labs/net/xhr.js"></script>
-
-  <script src="../ui/list/data.js"></script>
-  <script src="../ui/list/list.js"></script>
-
   <style type="text/css">
     body {
       margin: 10%;
@@ -80,6 +55,31 @@ goog.require('goog.result.SimpleResult');
     }
   </style>
 
+  <script src="../../../libs/closure-library/closure/goog/base.js"></script>
+  <script type="text/javascript">
+
+    goog.require('goog.Uri');
+    goog.require('goog.array');
+    goog.require('goog.async.Delay');
+    goog.require('goog.ds.DataManager');
+    goog.require('goog.ds.FastDataNode');
+    goog.require('goog.ds.JsDataSource');
+    goog.require('goog.iter');
+    goog.require('goog.math.Range');
+    goog.require('goog.net.XhrManager');
+    goog.require('goog.ui.Component');
+
+    goog.require('goog.result.DependentResult');
+    goog.require('goog.result.Result');
+    goog.require('goog.result.SimpleResult');
+
+  </script>
+
+  <script src="../../../libs/closure-library/closure/goog/labs/net/xhr.js"></script>
+
+  <script src="../ui/list/data.js"></script>
+  <script src="../ui/list/list.js"></script>
+
 </head>
 <body>
 
@@ -99,13 +99,14 @@ goog.require('goog.result.SimpleResult');
   
 
   <script>
+
     var data = new goog.ui.list.Data(
         '/api', // Url to request remote JSON
         30);    // Items count per page in a JSON
 
     // Decorate example
     var listElem1 = goog.dom.getElementByClass('goog-list', goog.dom.getElement('my-list1'));
-    var list = new goog.ui.List(data);
+    var list = new goog.ui.List(data, renderer);
     list.decorate(listElem1);
 
     // Display total count
@@ -116,8 +117,12 @@ goog.require('goog.result.SimpleResult');
 
     // Render example
     var listElem2 = goog.dom.getElement('my-list2')
-    var list2 = new goog.ui.List(data);
+    var list2 = new goog.ui.List(data, renderer);
     list2.render(listElem2);
+
+    function renderer(data) {
+      return 'id: ' + data['id'] + '  title: ' + data['title'];
+    }
   </script>
 
 </body>
