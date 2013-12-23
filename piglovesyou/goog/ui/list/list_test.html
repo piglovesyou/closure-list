@@ -1,0 +1,242 @@
+<!--
+ * @license
+ * Copyright (c) 2012 Soichi Takamura (http://stakam.net/)
+ *
+ * Dual licensed under the MIT and GPL licenses:
+ *   http://www.opensource.org/licenses/mit-license.php
+ *   http://www.gnu.org/licenses/gpl.html
+ -->
+
+<!DOCTYPE HTML>
+<html>
+<head>
+	<meta charset="UTF-8">
+	<title>Closure Unit Tests - goog.ui.List</title>
+
+  <style type="text/css">
+      body {
+        margin: 10%;
+        color: #4d4e6d;
+      }
+      h2 {
+        font-size: 1em;
+        font-weight: normal;
+        margin: 0 0 .83em;
+      }
+      .my-list {
+        width: 40%;
+        min-width: 220px;
+        display: inline-block;
+        margin-right: 20px;
+        vertical-align: top;
+      }
+      .goog-list {
+        height: 350px;
+        border: 2px #1e7cc1 solid;
+        padding: 6px;
+        overflow: auto;
+        -webkit-overflow-scrolling: touch;
+      }
+      .goog-list .goog-list-container > div {
+        /* height: 60px */
+        line-height: 60px;
+        padding: 0 10px;
+        border-bottom: 6px white solid;
+        box-sizing: border-box;
+        background: #e9edf1;
+        color: #9c999f;
+      }
+      .goog-list .goog-list-container > div:last-child {
+        border-bottom: none;
+      }
+      .goog-list .goog-list-container > div:hover {
+        background: #c5d6ed;
+      }
+  </style>
+
+  <script src="../../../../libs/closure-library/closure/goog/base.js"></script>
+  <script type="text/javascript">
+
+    // Required by goog.ui.list.Data
+    goog.require('goog.ds.FastDataNode');
+    goog.require('goog.ds.PrimitiveFastDataNode');
+    goog.require('goog.ds.SortedNodeList');
+    goog.require('goog.events.EventTarget');
+    goog.require('goog.result.SimpleResult');
+    goog.require('goog.net.XhrManager');
+
+  </script>
+  <script src="data.js"></script>
+  <script type="text/javascript">
+
+    // Required by goog.ui.List
+    goog.require('goog.Uri');
+    goog.require('goog.array');
+    goog.require('goog.async.Delay');
+    goog.require('goog.ds.DataManager');
+    goog.require('goog.ds.FastDataNode');
+    goog.require('goog.ds.JsDataSource');
+    goog.require('goog.math.Range');
+    goog.require('goog.net.XhrManager');
+    goog.require('goog.ui.Component');
+    goog.require('goog.ui.list.Data');
+
+  </script>
+  <script src="list.js"></script>
+  <script type="text/javascript">
+
+    goog.require('goog.json');
+    goog.require('goog.dom');
+    goog.require('goog.testing.jsunit');
+    goog.require('goog.testing.net.XhrIo');
+    goog.require('goog.testing.net.XhrIoPool');
+
+    goog.require('goog.testing.MockClock');
+    // goog.require('goog.testing.events');
+    // goog.require('goog.testing.recordFunction');
+  </script>
+
+</head>
+<body>
+
+  <div id="sandbox"></div>
+
+  <script>
+
+
+  var sandbox = document.getElementById('sandbox');
+  var url = '/some/api';
+  var total = 18;
+  var perPage = 5;
+
+  var list, data, mockClock;
+
+
+
+  //=========================================================================
+  // Setup
+  function setUp() {
+    // Overwrite real classes
+    goog.net.XhrIo = goog.testing.net.XhrIo;
+    goog.net.XhrIoPool = goog.testing.net.XhrIoPool;
+    mockClock = new goog.testing.MockClock(true);
+  }
+  function tearDown() {
+    if (list) list.dispose();
+    if (data) data.dispose();
+    list = data = null;
+    mockClock.dispose();
+    goog.dom.removeChildren(sandbox);
+  }
+
+
+
+  //=========================================================================
+  // Test cases
+
+  function testDecorate() {
+
+    sandbox.innerHTML =
+      '<div class="goog-list">' +
+        '<div class="goog-list-container"><\/div>' +
+      '<\/div>';
+    data = new goog.ui.list.Data('/api');
+    list = new goog.ui.List(data, 5);
+    list.decorate(goog.dom.getElementByClass('goog-list', sandbox));
+
+    var xhrIo = data.xhr_.xhrPool_.getXhr();
+    setTimeout(function() {
+      xhrIo.simulateResponse(200, generateResponseText(0, 10));
+      assert(list.getChildCount() == 10);
+    }, 1000);
+    mockClock.tick(2000);
+
+  }
+
+  function testRender() {
+
+    data = new goog.ui.list.Data('/api');
+    list = new goog.ui.List(data, 5);
+    list.render(sandbox);
+
+    var xhrIo = data.xhr_.xhrPool_.getXhr();
+    setTimeout(function() {
+      xhrIo.simulateResponse(200, generateResponseText(0, 10));
+      assert(list.getChildCount() == 10);
+    }, 1000);
+    mockClock.tick(2000);
+
+  }
+
+
+
+
+  //=========================================================================
+  // Utility methods
+  function generateResponseText(offset, size) {
+    return JSON.stringify(createResponse(offset, size));
+  }
+  function createResponse(offset, size) {
+    return {
+      total: total,
+      items: createItems(offset, size)
+    };
+  }
+  function createItems(offset, size) {
+    var items = [];
+    for (var i = offset; i < offset + size && i < total; i++) {
+      items.push({
+        id: 'id' + i,
+        title: 'yeah',
+        body: 'ohh... '
+      });
+    }
+    return items;
+  }
+
+
+
+
+
+  // // Utils
+  // function _appendDomToDecorate () {
+  // }
+  // function _appendItems () {
+  // }
+  // function _decorate () {
+  // }
+
+
+
+  // // Initialization and clearing
+  // function setUp () {
+  //   clock = new goog.testing.MockClock(true);
+  // }
+  // function tearDown () {
+  // }
+
+
+
+  // // Tests to run
+  // function testDecorate () {
+  // }
+
+  // function testRender () {
+  // }
+
+  // function testDisabledWhenNotScrollable () {
+  // }
+
+  // function testEnabledWhenScrollable () {
+  // }
+
+  // function testScroll () {
+  // }
+
+  // function testScrollByKeydown () {
+  // }
+
+  </script>
+
+</body>
+</html>
