@@ -160,11 +160,14 @@ goog.ui.List.prototype.enterDocument = function() {
  */
 goog.ui.List.prototype.handleTotalUpdate_ = function(e) {
   this.updateParamsInternal();
-  this.updateVirualSizing(this.getChildCount());
+  this.updateVirualSizing();
 };
 
 
-/***/
+/**
+ * Here is the most of the logic in goog.ui.List.
+ * A kind of large method but it would be hard to devide.
+ */
 goog.ui.List.prototype.redraw = function() {
   var dh = this.getDomHelper();
   var element = this.getElement();
@@ -196,6 +199,8 @@ goog.ui.List.prototype.redraw = function() {
   var lastRange = this.lastRange.start < 0 ? null : this.lastRange;
   this.lastRange = range;
 
+  // We want to create only necessary rows, so if there is a row
+  // that will be needed in this time as well, we keep it.
   if (!lastRange || !goog.math.Range.hasIntersection(range, lastRange)) {
     this.removeChildren(true);
   } else {
@@ -210,6 +215,8 @@ goog.ui.List.prototype.redraw = function() {
     }
   }
 
+  // Create rows of a page.
+  // If we already have rows of a page, skip.
   var fragment = dh.getDocument().createDocumentFragment();
   for (var i = range.start; i < range.end + 1; i++) {
     if (!lastRange || !goog.math.Range.containsPoint(lastRange, i)) {
@@ -223,17 +230,21 @@ goog.ui.List.prototype.redraw = function() {
   // to (rowHeight * total), so that a browser native scrollbar indicates
   // a real size and position.
   this.updateVirualSizing();
-  // content.style.height = concreateContentHeight + 'px';
 
+  // We promise rows' data before append DOMs because we want
+  // minimum manipulation of the DOM tree.
   this.data.promiseRows(range.start * this.rowCountPerPage, this.getChildCount())
     .wait(goog.bind(this.onResolved, this));
+
+  // Finally append DOMs to the DOM tree.
   if (!lastRange || lastRange.end < range.end) {
     content.appendChild(fragment);
   } else {
     dh.insertChildAt(content, fragment, 0);
   }
-  this.forEachChild(function(child) {
-    child.enterDocument();
+  // Make sure all the children entered in the Document.
+  this.forEachChild(function(c) {
+    if (!c.isInDocument()) c.enterDocument();
   });
 };
 
