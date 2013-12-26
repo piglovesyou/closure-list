@@ -192,14 +192,30 @@ goog.ui.List.prototype.redraw = function() {
   if (goog.math.Range.equals(range, this.lastRange)) {
     return;
   }
+
+  var lastRange = this.lastRange.start < 0 ? null : this.lastRange;
   this.lastRange = range;
 
-  this.removeChildren(true); // We can not to remove them every time. But how?
+  if (!lastRange || !goog.math.Range.hasIntersection(range, lastRange)) {
+    this.removeChildren(true);
+  } else {
+    var c, i = 0;
+    while (c = this.getChildAt(i)) {
+      if (goog.math.Range.containsPoint(range,
+          Math.floor(c.getIndex() / this.rowCountPerPage))) {
+        i++;
+      } else {
+        this.removeChild(c, true);
+      }
+    }
+  }
 
-  var appendArgs = [content];
+  var fragment = dh.getDocument().createDocumentFragment();
   for (var i = range.start; i < range.end + 1; i++) {
-    var count = this.calcRowCountInPage_(i);
-    appendArgs.push(this.createPage(i, count));
+    if (!lastRange || !goog.math.Range.containsPoint(lastRange, i)) {
+      var count = this.calcRowCountInPage_(i);
+      fragment.appendChild(this.createPage(i, count))
+    }
   }
 
   // In short, we are creating a virtual content, which contains a top margin +
@@ -211,7 +227,11 @@ goog.ui.List.prototype.redraw = function() {
 
   this.data.promiseRows(range.start * this.rowCountPerPage, this.getChildCount())
     .wait(goog.bind(this.onResolved, this));
-  dh.append.apply(dh, appendArgs);
+  if (!lastRange || lastRange.end < range.end) {
+    content.appendChild(fragment);
+  } else {
+    dh.insertChildAt(content, fragment, 0);
+  }
   this.forEachChild(function(child) {
     child.enterDocument();
   });
