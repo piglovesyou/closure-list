@@ -132,29 +132,25 @@ goog.ui.List.prototype.canDecorate = function(element) {
 };
 
 
-/**
- * @param {number} rowCount .
- */
-goog.ui.List.prototype.updateVirualSizing = function(rowCount) {
+/***/
+goog.ui.List.prototype.updateVirualSizing = function() {
   this.contentEl.style.paddingTop =
       this.lastRange.start * this.pageHeight + 'px';
   this.contentEl.style.paddingBottom = this.rowHeight * this.data.getTotal() -
-      this.lastRange.start * this.pageHeight - rowCount * this.rowHeight + 'px';
+      this.lastRange.start * this.pageHeight - this.getChildCount() * this.rowHeight + 'px';
 };
 
 
 /** @inheritDoc */
 goog.ui.List.prototype.enterDocument = function() {
   goog.base(this, 'enterDocument');
-
   var eh = this.getHandler();
   var element = this.getElement();
 
-  eh.listen(element, 'scroll', this.redraw)
+  eh.listen(element, goog.events.EventType.SCROLL, this.redraw)
     .listen(this.data,
         goog.ui.list.Data.EventType.UPDATE_TOTAL, this.handleTotalUpdate_);
   this.redraw();
-
 };
 
 
@@ -200,22 +196,20 @@ goog.ui.List.prototype.redraw = function() {
 
   this.removeChildren(true); // We can not to remove them every time. But how?
 
-  var concreteRowCount = 0;
   var appendArgs = [content];
   for (var i = range.start; i < range.end + 1; i++) {
     var count = this.calcRowCountInPage_(i);
     appendArgs.push(this.createPage(i, count));
-    concreteRowCount += count;
   }
 
   // In short, we are creating a virtual content, which contains a top margin +
   // a real dom content + a bottom margin. These three's height always comes
   // to (rowHeight * total), so that a browser native scrollbar indicates
   // a real size and position.
-  this.updateVirualSizing(concreteRowCount);
+  this.updateVirualSizing();
   // content.style.height = concreateContentHeight + 'px';
 
-  this.data.promiseRows(range.start * this.rowCountPerPage, concreteRowCount)
+  this.data.promiseRows(range.start * this.rowCountPerPage, this.getChildCount())
     .wait(goog.bind(this.onResolved, this));
   dh.append.apply(dh, appendArgs);
   this.forEachChild(function(child) {
