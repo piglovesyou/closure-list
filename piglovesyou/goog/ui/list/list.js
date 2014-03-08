@@ -79,27 +79,39 @@ goog.inherits(goog.ui.List, goog.ui.Component);
 goog.exportSymbol('goog.ui.List', goog.ui.List);
 
 
+/** @type {string} */
+goog.ui.list.RowNodeNamePrefix = goog.ui.list.Data.RowNodeNamePrefix;
+
+
 /**
  * @param {goog.ui.list.Data} data .
  */
 goog.ui.List.prototype.setData = function(data) {
-  this.data = data;
+
+  /**
+   * @type {goog.ui.list.Data} .
+   */
+  this.data_ = data;
   this.updateParamsInternal();
 };
 
 
-/** @type {string} */
-goog.ui.list.RowNodeNamePrefix = goog.ui.list.Data.RowNodeNamePrefix;
+/**
+ * @return {goog.ui.list.Data} data .
+ */
+goog.ui.List.prototype.getData = function() {
+  return this.data_;
+};
 
 
 /***/
 goog.ui.List.prototype.updateParamsInternal = function() {
   this.lastPageIndex =
-      Math.ceil(this.data.getTotal() / this.rowCountPerPage) - 1;
+      Math.ceil(this.data_.getTotal() / this.rowCountPerPage) - 1;
   this.pageHeight = this.rowHeight * this.rowCountPerPage;
 
   // Cache for a speed.
-  this.lastPageRows = this.data.getTotal() % this.rowCountPerPage;
+  this.lastPageRows = this.data_.getTotal() % this.rowCountPerPage;
   if (this.lastPageRows == 0) this.lastPageRows = this.rowCountPerPage;
 
   this.lastRange = new goog.math.Range(-1, -1);
@@ -140,20 +152,20 @@ goog.ui.List.prototype.canDecorate = function(element) {
 goog.ui.List.prototype.updateVirualSizing = function() {
   this.contentEl.style.paddingTop =
       this.lastRange.start * this.pageHeight + 'px';
-  this.contentEl.style.paddingBottom = this.rowHeight * this.data.getTotal() -
+  this.contentEl.style.paddingBottom = this.rowHeight * this.data_.getTotal() -
       this.lastRange.start * this.pageHeight - this.getChildCount() * this.rowHeight + 'px';
 };
 
 
 /** @inheritDoc */
 goog.ui.List.prototype.enterDocument = function() {
-  goog.asserts.assert(this.data, 'You should set data before "enterDocument".');
+  goog.asserts.assert(this.data_, 'You should set data before "enterDocument".');
   goog.base(this, 'enterDocument');
   var eh = this.getHandler();
   var element = this.getElement();
 
   eh.listen(element, goog.events.EventType.SCROLL, this.redraw)
-    .listen(this.data,
+    .listen(this.data_,
         goog.ui.list.Data.EventType.UPDATE_TOTAL, this.handleTotalUpdate_);
   this.redraw();
 };
@@ -238,7 +250,7 @@ goog.ui.List.prototype.redraw = function() {
 
   // We promise rows' data before append DOMs because we want
   // minimum manipulation of the DOM tree.
-  this.data.promiseRows(range.start * this.rowCountPerPage, this.getChildCount())
+  this.data_.promiseRows(range.start * this.rowCountPerPage, this.getChildCount())
     .wait(goog.bind(this.onResolved, this));
 
   // Finally append DOMs to the DOM tree.
@@ -259,7 +271,7 @@ goog.ui.List.prototype.redraw = function() {
  */
 goog.ui.List.prototype.onResolved = function(result) {
   this.forEachChild(function(row) {
-    var data = this.data.getRowByIndex(row.getIndex());
+    var data = this.data_.getRowByIndex(row.getIndex());
     if (data) {
       row.renderContent(data);
     }
@@ -273,7 +285,7 @@ goog.ui.List.prototype.onResolved = function(result) {
  * @return {number} .
  */
 goog.ui.List.prototype.calcRowCountInPage_ = function(pageIndex) {
-  var total = this.data.getTotal();
+  var total = this.data_.getTotal();
   if (total < (pageIndex + 1) * this.rowCountPerPage) {
     return total % this.rowCountPerPage;
   }
