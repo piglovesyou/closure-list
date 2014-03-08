@@ -28,7 +28,6 @@ goog.require('goog.ui.list.Data');
 
 /**
  * @constructor
- * @param {goog.ui.list.Data} data .
  * @param {Function|function(new:goog.ui.List.Item,
  *         number, number, Function=, goog.dom.DomHelper=)} rowRenderer
  *    You can pass two types of params:
@@ -40,10 +39,8 @@ goog.require('goog.ui.list.Data');
  * @param {goog.dom.DomHelper=} opt_domHelper .
  * @extends {goog.ui.Component}
  */
-goog.ui.List = function(data, rowRenderer, opt_rowCountPerPage, opt_domHelper) {
+goog.ui.List = function(rowRenderer, opt_rowCountPerPage, opt_domHelper) {
   goog.base(this, opt_domHelper);
-
-  this.data = data;
 
   this.rowHeight = 60;
 
@@ -77,11 +74,18 @@ goog.ui.List = function(data, rowRenderer, opt_rowCountPerPage, opt_domHelper) {
   } else {
     goog.asserts.fail('You need pass renderer or render class');
   }
-
-  this.updateParamsInternal();
 };
 goog.inherits(goog.ui.List, goog.ui.Component);
 goog.exportSymbol('goog.ui.List', goog.ui.List);
+
+
+/**
+ * @param {goog.ui.list.Data} data .
+ */
+goog.ui.List.prototype.setData = function(data) {
+  this.data = data;
+  this.updateParamsInternal();
+};
 
 
 /** @type {string} */
@@ -143,6 +147,7 @@ goog.ui.List.prototype.updateVirualSizing = function() {
 
 /** @inheritDoc */
 goog.ui.List.prototype.enterDocument = function() {
+  goog.asserts.assert(this.data, 'You should set data before "enterDocument".');
   goog.base(this, 'enterDocument');
   var eh = this.getHandler();
   var element = this.getElement();

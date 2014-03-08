@@ -146,7 +146,8 @@
         '<div class="goog-list-container"><\/div>' +
       '<\/div>';
     data = new goog.ui.list.Data('/api');
-    list = new goog.ui.List(data, contentRenderer, 5);
+    list = new goog.ui.List(contentRenderer, 5);
+    list.setData(data);
     list.decorate(goog.dom.getElementByClass('goog-list', sandbox));
 
     onXhrRespond(function() {
@@ -157,7 +158,8 @@
 
   function testRender() {
     data = new goog.ui.list.Data('/api');
-    list = new goog.ui.List(data, contentRenderer, 5);
+    list = new goog.ui.List(contentRenderer, 5);
+    list.setData(data);
     list.render(sandbox);
 
     onXhrRespond(function() {

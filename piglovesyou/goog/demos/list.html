@@ -106,7 +106,8 @@
 
     // Decorate example
     var listElem1 = goog.dom.getElementByClass('goog-list', goog.dom.getElement('my-list1'));
-    var list = new goog.ui.List(data, renderer);
+    var list = new goog.ui.List(renderer);
+    list.setData(data);
     list.decorate(listElem1);
 
     // Display total count
@@ -117,7 +118,8 @@
 
     // Render example
     var listElem2 = goog.dom.getElement('my-list2')
-    var list2 = new goog.ui.List(data, renderer);
+    var list2 = new goog.ui.List(renderer);
+    list2.setData(data);
     list2.render(listElem2);
 
     function renderer(data) {
