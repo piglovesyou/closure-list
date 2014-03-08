@@ -63,7 +63,7 @@ goog.ui.List = function(rowRenderer, opt_rowCountPerPage, opt_domHelper) {
    */
   this.rowRenderer_;
 
-  if (rowRenderer instanceof goog.ui.List.Item) {
+  if (rowRenderer.prototype instanceof goog.ui.List.Item) {
     this.rowClassRef_ = /**@type {function(new:goog.ui.List.Item,
         number, number, Function=, goog.dom.DomHelper=)}*/(rowRenderer);
     this.rowRenderer_ = goog.isFunction;
