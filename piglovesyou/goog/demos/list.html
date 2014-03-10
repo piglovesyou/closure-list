@@ -90,12 +90,13 @@
     <div class="goog-list">
       <div class="goog-list-container"></div>
     </div>
-    <div class="my-list-totalmsg"></div>
   </div>
 
   <div id="my-list2" class="my-list">
     <h2>Rendered:</h2>
   </div>
+
+  <pre class="log"></pre>
   
 
   <script>
@@ -111,16 +112,27 @@
     list.decorate(listElem1);
 
     // Display total count
-    var totalMsgEl = goog.dom.getElementByClass('my-list-totalmsg');
-    goog.events.listen(data, goog.ui.list.Data.EventType.UPDATE_TOTAL, function(e) {
-      totalMsgEl.innerHTML = 'total: ' + e.target.getTotal();
-    });
+    var logEl = goog.dom.getElementByClass('log');
+    goog.events.listen(data, goog.ui.list.Data.EventType.UPDATE_TOTAL, handleTotalUpdated);
 
     // Render example
     var listElem2 = goog.dom.getElement('my-list2')
     var list2 = new goog.ui.List(renderer);
     list2.setData(data);
     list2.render(listElem2);
+
+    goog.events.listen(list, goog.ui.list.EventType.CLICKROW, handleRowClicked);
+    goog.events.listen(list2, goog.ui.list.EventType.CLICKROW, handleRowClicked);
+
+    function handleTotalUpdated(e) {
+      logEl.innerHTML = 'total: ' + e.target.getTotal() + '\n' + logEl.innerHTML;
+    }
+
+    function handleRowClicked(e) {
+      logEl.innerHTML = '"list' + e.currentTarget.getId() + '" clicked: ' +
+          JSON.stringify(e.data.getJsObject()) +
+          '\n' + logEl.innerHTML;
+    }
 
     function renderer(data) {
       return 'id: ' + data['id'] + '  title: ' + data['title'];

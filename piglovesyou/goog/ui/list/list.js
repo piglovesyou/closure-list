@@ -79,6 +79,14 @@ goog.inherits(goog.ui.List, goog.ui.Component);
 goog.exportSymbol('goog.ui.List', goog.ui.List);
 
 
+/**
+ * @enum {string}
+ */
+goog.ui.list.EventType = {
+  CLICKROW: 'clickrow'
+};
+
+
 /** @type {string} */
 goog.ui.list.RowNodeNamePrefix = goog.ui.list.Data.RowNodeNamePrefix;
 
@@ -101,6 +109,12 @@ goog.ui.List.prototype.setData = function(data) {
  */
 goog.ui.List.prototype.getData = function() {
   return this.data_;
+};
+
+
+/** @inheritDoc */
+goog.ui.List.prototype.getContentElement = function() {
+  return this.contentEl;
 };
 
 
@@ -159,15 +173,50 @@ goog.ui.List.prototype.updateVirualSizing = function() {
 
 /** @inheritDoc */
 goog.ui.List.prototype.enterDocument = function() {
-  goog.asserts.assert(this.data_, 'You should set data before "enterDocument".');
+  goog.asserts.assert(this.data_,
+      'You should set data before "enterDocument".');
   goog.base(this, 'enterDocument');
   var eh = this.getHandler();
   var element = this.getElement();
 
   eh.listen(element, goog.events.EventType.SCROLL, this.redraw)
     .listen(this.data_,
-        goog.ui.list.Data.EventType.UPDATE_TOTAL, this.handleTotalUpdate_);
+        goog.ui.list.Data.EventType.UPDATE_TOTAL, this.handleTotalUpdate_)
+    .listen(this.getContentElement(),
+        goog.events.EventType.CLICK, this.handleClick);
+
   this.redraw();
+};
+
+
+/**
+ * @param {goog.events.Event} e .
+ */
+goog.ui.List.prototype.handleClick = function(e) {
+  var row = this.findRowFromEventTarget(/**@type{Element}*/(e.target));
+  if (row) {
+    row.dispatchEvent(new goog.ui.List.ClickRowEvent(
+        this.data_.getRowByIndex(row.getIndex()), row));
+  }
+};
+
+
+/**
+ * @param {Element} et .
+ * @return {?goog.ui.List.Item} .
+ */
+goog.ui.List.prototype.findRowFromEventTarget = function(et) {
+  // TODO: Can be faster to seek row from a visible content.
+  var found;
+  goog.array.findIndex(this.getChildIds(), function(id, i) {
+    var child = this.getChild(id);
+    if (goog.dom.contains(child.getElement(), et)) {
+      found = /**@type{goog.ui.List.Item}*/(child);
+      return true;
+    }
+    return false;
+  }, this);
+  return found;
 };
 
 
@@ -238,7 +287,7 @@ goog.ui.List.prototype.redraw = function() {
   for (var i = range.start; i < range.end + 1; i++) {
     if (!lastRange || !goog.math.Range.containsPoint(lastRange, i)) {
       var count = this.calcRowCountInPage_(i);
-      fragment.appendChild(this.createPage(i, count))
+      fragment.appendChild(this.createPage(i, count));
     }
   }
 
@@ -313,11 +362,23 @@ goog.ui.List.prototype.createPage = function(index, rowCount) {
 };
 
 
-/** @inheritDoc */
-goog.ui.List.prototype.disposeInternal = function() {
-  goog.base(this, 'disposeInternal');
-};
 
+/**
+ * An event dispached by list.Item.
+ * @constructor
+ * @extends {goog.events.Event}
+ * @param {goog.ds.DataNode} data .
+ * @param {Object=} row .
+ */
+goog.ui.List.ClickRowEvent = function(data, row) {
+  goog.base(this, goog.ui.list.EventType.CLICKROW, row);
+
+  /**
+   * @type {goog.ds.DataNode}
+   */
+  this.data = data;
+};
+goog.inherits(goog.ui.List.ClickRowEvent, goog.events.Event);
 
 
 
@@ -393,29 +454,3 @@ goog.ui.List.Item.prototype.renderContent = function(data) {
   this.getElement().innerHTML = this.renderer_(data);
 };
 
-
-/** @inheritDoc */
-goog.ui.List.Item.prototype.decorateInternal = function(element) {
-  goog.base(this, 'decorateInternal', element);
-};
-
-
-/** @inheritDoc */
-goog.ui.List.Item.prototype.canDecorate = function(element) {
-  if (element) {
-    return true;
-  }
-  return false;
-};
-
-
-/** @inheritDoc */
-goog.ui.List.Item.prototype.enterDocument = function() {
-  goog.base(this, 'enterDocument');
-};
-
-
-/** @inheritDoc */
-goog.ui.List.Item.prototype.disposeInternal = function() {
-  goog.base(this, 'disposeInternal');
-};
