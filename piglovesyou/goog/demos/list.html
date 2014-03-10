@@ -101,9 +101,7 @@
 
   <script>
 
-    var data = new goog.ui.list.Data(
-        '/api', // Url to request remote JSON
-        30);    // Items count per page in a JSON
+    var data = new goog.ui.list.Data('/api'); // Url to request remote JSON
 
     // Decorate example
     var listElem1 = goog.dom.getElementByClass('goog-list', goog.dom.getElement('my-list1'));
@@ -117,7 +115,7 @@
 
     // Render example
     var listElem2 = goog.dom.getElement('my-list2')
-    var list2 = new goog.ui.List(renderer);
+    var list2 = new goog.ui.List(renderer, 30); // Items count per a request
     list2.setData(data);
     list2.render(listElem2);
 
