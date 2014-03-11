@@ -101,6 +101,12 @@ goog.ui.List.prototype.setData = function(data) {
    */
   this.data_ = data;
   this.updateParamsInternal();
+
+  /**
+   * Reset last range cache.
+   * @type {goog.math.Range}
+   */
+  this.lastRange = null;
 };
 
 
@@ -127,8 +133,6 @@ goog.ui.List.prototype.updateParamsInternal = function() {
   // Cache for a speed.
   this.lastPageRows = this.data_.getTotal() % this.rowCountPerPage;
   if (this.lastPageRows == 0) this.lastPageRows = this.rowCountPerPage;
-
-  this.lastRange = new goog.math.Range(-1, -1);
 };
 
 
@@ -164,6 +168,7 @@ goog.ui.List.prototype.canDecorate = function(element) {
 
 /***/
 goog.ui.List.prototype.updateVirualSizing = function() {
+  goog.asserts.assert(this.lastRange);
   this.contentEl.style.paddingTop =
       this.lastRange.start * this.pageHeight + 'px';
   this.contentEl.style.paddingBottom = this.rowHeight * this.data_.getTotal() -
@@ -262,7 +267,7 @@ goog.ui.List.prototype.redraw = function() {
     return;
   }
 
-  var lastRange = this.lastRange.start < 0 ? null : this.lastRange;
+  var lastRange = this.lastRange; // nullable
   this.lastRange = range;
 
   // We want to create only necessary rows, so if there is a row
