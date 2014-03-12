@@ -149,7 +149,9 @@ goog.ui.List.prototype.createDom = function() {
   var dh = this.getDomHelper();
   // TODO: topMarginEl & bottomMarginEl
   var element = dh.createDom('div', 'goog-list',
-    this.contentEl = dh.createDom('div', 'goog-list-container'));
+    this.topMarginEl = dh.createDom('div', 'goog-list-topmargin'),
+    this.contentEl = dh.createDom('div', 'goog-list-container'),
+    this.bottomMarginEl = dh.createDom('div', 'goog-list-bottommargin'));
   this.setElementInternal(element);
   this.elementHeight = goog.style.getContentBoxSize(element).height;
 };
@@ -478,7 +480,7 @@ goog.ui.List.Margin_ = function(firstElement) {
 };
 goog.inherits(goog.ui.List.Margin_, goog.Disposable);
 
-goog.ui.List.Margin_.MAX_HEIGHT = 10 * 100 * 100 * 100;
+goog.ui.List.Margin_.MAX_HEIGHT = 100 * 100 * 100;
 
 goog.ui.List.Margin_.prototype.set = function(height) {
 

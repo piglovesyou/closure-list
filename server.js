@@ -16,7 +16,7 @@ app.get('/', function(req, res) {
   res.redirect('piglovesyou/goog/demos/list.html');
 });
 
-var total = 400;
+var total = 90 * 1000; // 400;
 
 var createItems = function(offset, size) {
   var items = [];

@@ -88,7 +88,9 @@
   <div id="my-list1" class="my-list">
     <h2>Decorated:</h2>
     <div class="goog-list">
+      <div class="goog-list-topmargin"></div>
       <div class="goog-list-container"></div>
+      <div class="goog-list-bottommargin"></div>
     </div>
   </div>
 
@@ -123,7 +125,7 @@
     goog.events.listen(list2, goog.ui.list.EventType.CLICKROW, handleRowClicked);
 
     function handleTotalUpdated(e) {
-      logEl.innerHTML = 'total: ' + e.target.getTotal() + '\n' + logEl.innerHTML;
+      logEl.innerHTML = 'total: ' + e.target.getTotal() + '\r\n' + logEl.innerHTML;
     }
 
     function handleRowClicked(e) {
