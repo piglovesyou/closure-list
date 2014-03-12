@@ -141,13 +141,13 @@ goog.ui.List.prototype.decorateInternal = function(element) {
   goog.base(this, 'decorateInternal', element);
 
   this.elementHeight = goog.style.getContentBoxSize(element).height;
-  this.contentEl = this.getElementByClass('goog-list-container');
 };
 
 
 /** @inheritDoc */
 goog.ui.List.prototype.createDom = function() {
   var dh = this.getDomHelper();
+  // TODO: topMarginEl & bottomMarginEl
   var element = dh.createDom('div', 'goog-list',
     this.contentEl = dh.createDom('div', 'goog-list-container'));
   this.setElementInternal(element);
@@ -159,7 +159,9 @@ goog.ui.List.prototype.createDom = function() {
 goog.ui.List.prototype.canDecorate = function(element) {
   if (element &&
       goog.dom.classes.has(element, 'goog-list') &&
-      goog.dom.getElementByClass('goog-list-container', element)) {
+      (this.topMarginEl = goog.dom.getElementByClass('goog-list-topmargin', element)) &&
+      (this.contentEl = goog.dom.getElementByClass('goog-list-container', element)) &&
+      (this.bottomMarginEl = goog.dom.getElementByClass('goog-list-bottommargin', element))) {
     return true;
   }
   return false;
@@ -169,10 +171,9 @@ goog.ui.List.prototype.canDecorate = function(element) {
 /***/
 goog.ui.List.prototype.updateVirualSizing = function() {
   goog.asserts.assert(this.lastRange);
-  this.contentEl.style.paddingTop =
-      this.lastRange.start * this.pageHeight + 'px';
-  this.contentEl.style.paddingBottom = this.rowHeight * this.data_.getTotal() -
-      this.lastRange.start * this.pageHeight - this.getChildCount() * this.rowHeight + 'px';
+  this.topMargin.set(this.lastRange.start * this.pageHeight);
+  this.bottomMargin.set(this.rowHeight * this.data_.getTotal() -
+      this.lastRange.start * this.pageHeight - this.getChildCount() * this.rowHeight);
 };
 
 
@@ -183,6 +184,10 @@ goog.ui.List.prototype.enterDocument = function() {
   goog.base(this, 'enterDocument');
   var eh = this.getHandler();
   var element = this.getElement();
+
+  goog.asserts.assert(this.topMarginEl && this.bottomMarginEl);
+  this.topMargin = new goog.ui.List.Margin_(this.topMarginEl);
+  this.bottomMargin = new goog.ui.List.Margin_(this.bottomMarginEl);
 
   eh.listen(element, goog.events.EventType.SCROLL, this.redraw)
     .listen(this.data_,
@@ -459,3 +464,51 @@ goog.ui.List.Item.prototype.renderContent = function(data) {
   this.getElement().innerHTML = this.renderer_(data);
 };
 
+
+
+
+/**
+ * @private
+ * @constructor
+ * @extends {goog.Disposable}
+ */
+goog.ui.List.Margin_ = function(firstElement) {
+  goog.base(this);
+  this.elms = [firstElement];
+};
+goog.inherits(goog.ui.List.Margin_, goog.Disposable);
+
+goog.ui.List.Margin_.MAX_HEIGHT = 10 * 100 * 100 * 100;
+
+goog.ui.List.Margin_.prototype.set = function(height) {
+
+  // TODO: refactor
+
+  var countNeeded = Math.ceil(height / goog.ui.List.Margin_.MAX_HEIGHT);
+  var i;
+
+  if (!countNeeded) {
+    goog.style.setHeight(this.elms[0], 0);
+    i = 1;
+  } else {
+    for (i = 0; i < countNeeded; i++) {
+      // Cannot be zero.
+      var h = i == countNeeded - 1 &&
+              (height % goog.ui.List.Margin_.MAX_HEIGHT) ||
+              goog.ui.List.Margin_.MAX_HEIGHT;
+      if (!this.elms[i]) {
+        var el = goog.dom.createDom('div');
+        goog.dom.insertSiblingAfter(el, /**@type{Element}*/(goog.array.peek(this.elms)));
+        this.elms[i] = el;
+      }
+      goog.style.setHeight(this.elms[i], h);
+    }
+  }
+
+  for (;i < this.elms.length; i++) {
+    goog.dom.removeNode(this.elms[i]);
+    this.elms[i] = null;
+  }
+
+  this.elms.length = Math.max(countNeeded, 1);
+};
