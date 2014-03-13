@@ -88,37 +88,51 @@
   <div id="my-list1" class="my-list">
     <h2>Decorated:</h2>
     <div class="goog-list">
+      <div class="goog-list-topmargin"></div>
       <div class="goog-list-container"></div>
+      <div class="goog-list-bottommargin"></div>
     </div>
-    <div class="my-list-totalmsg"></div>
   </div>
 
   <div id="my-list2" class="my-list">
     <h2>Rendered:</h2>
   </div>
+
+  <pre class="log"></pre>
   
 
   <script>
 
-    var data = new goog.ui.list.Data(
-        '/api', // Url to request remote JSON
-        30);    // Items count per page in a JSON
+    var data = new goog.ui.list.Data('/api'); // Url to request remote JSON
 
     // Decorate example
     var listElem1 = goog.dom.getElementByClass('goog-list', goog.dom.getElement('my-list1'));
-    var list = new goog.ui.List(data, renderer);
+    var list = new goog.ui.List(renderer);
+    list.setData(data);
     list.decorate(listElem1);
 
     // Display total count
-    var totalMsgEl = goog.dom.getElementByClass('my-list-totalmsg');
-    goog.events.listen(data, goog.ui.list.Data.EventType.UPDATE_TOTAL, function(e) {
-      totalMsgEl.innerHTML = 'total: ' + e.target.getTotal();
-    });
+    var logEl = goog.dom.getElementByClass('log');
+    goog.events.listen(data, goog.ui.list.Data.EventType.UPDATE_TOTAL, handleTotalUpdated);
 
     // Render example
     var listElem2 = goog.dom.getElement('my-list2')
-    var list2 = new goog.ui.List(data, renderer);
+    var list2 = new goog.ui.List(renderer, 30); // Items count per a request
+    list2.setData(data);
     list2.render(listElem2);
+
+    goog.events.listen(list, goog.ui.list.EventType.CLICKROW, handleRowClicked);
+    goog.events.listen(list2, goog.ui.list.EventType.CLICKROW, handleRowClicked);
+
+    function handleTotalUpdated(e) {
+      logEl.innerHTML = 'total: ' + e.target.getTotal() + '\r\n' + logEl.innerHTML;
+    }
+
+    function handleRowClicked(e) {
+      logEl.innerHTML = '"list' + e.currentTarget.getId() + '" clicked: ' +
+          JSON.stringify(e.data.getJsObject()) +
+          '\n' + logEl.innerHTML;
+    }
 
     function renderer(data) {
       return 'id: ' + data['id'] + '  title: ' + data['title'];

@@ -1,0 +1,12 @@
+{
+  "id": "googuiList",
+  "paths": [
+	  "./piglovesyou"
+  ],
+  "closure-library": "./libs/closure-library/closure/goog",
+  "inputs": "./export.js",
+  "mode": "ADVANCED",
+  "level": "VERBOSE",
+  "output-file": "./export-min.js"
+}
+

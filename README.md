@@ -28,13 +28,14 @@ var data = new goog.ui.list.Data('/api' // Url to request a remote JSON to
                                  50);   // Optional: Total count of all items. You can lazily pass it.
 
 // Decorating example
-var list = new goog.ui.List(data,     // Set data object a list refers to
-                            renderer, // Set row renderer, or you can pass a subclass of goog.ui.List.Item.
+var list = new goog.ui.List(renderer, // Set row renderer, or you can pass a subclass of goog.ui.List.Item.
                             5);       // Optional: Item count per a request. Default is 25.
+list.setData(data); // Set data object a list refers to
 list.decorate(listElem1);
 
 // Rendering example
-var list2 = new goog.ui.List(data);
+var list2 = new goog.ui.List;
+list2.setData(data);
 list2.render();
 ```
 

@@ -28,7 +28,6 @@ goog.require('goog.ui.list.Data');
 
 /**
  * @constructor
- * @param {goog.ui.list.Data} data .
  * @param {Function|function(new:goog.ui.List.Item,
  *         number, number, Function=, goog.dom.DomHelper=)} rowRenderer
  *    You can pass two types of params:
@@ -40,10 +39,8 @@ goog.require('goog.ui.list.Data');
  * @param {goog.dom.DomHelper=} opt_domHelper .
  * @extends {goog.ui.Component}
  */
-goog.ui.List = function(data, rowRenderer, opt_rowCountPerPage, opt_domHelper) {
+goog.ui.List = function(rowRenderer, opt_rowCountPerPage, opt_domHelper) {
   goog.base(this, opt_domHelper);
-
-  this.data = data;
 
   this.rowHeight = 60;
 
@@ -66,7 +63,7 @@ goog.ui.List = function(data, rowRenderer, opt_rowCountPerPage, opt_domHelper) {
    */
   this.rowRenderer_;
 
-  if (rowRenderer instanceof goog.ui.List.Item) {
+  if (rowRenderer.prototype instanceof goog.ui.List.Item) {
     this.rowClassRef_ = /**@type {function(new:goog.ui.List.Item,
         number, number, Function=, goog.dom.DomHelper=)}*/(rowRenderer);
     this.rowRenderer_ = goog.isFunction;
@@ -77,28 +74,65 @@ goog.ui.List = function(data, rowRenderer, opt_rowCountPerPage, opt_domHelper) {
   } else {
     goog.asserts.fail('You need pass renderer or render class');
   }
-
-  this.updateParamsInternal();
 };
 goog.inherits(goog.ui.List, goog.ui.Component);
 goog.exportSymbol('goog.ui.List', goog.ui.List);
+
+
+/**
+ * @enum {string}
+ */
+goog.ui.list.EventType = {
+  CLICKROW: 'clickrow'
+};
 
 
 /** @type {string} */
 goog.ui.list.RowNodeNamePrefix = goog.ui.list.Data.RowNodeNamePrefix;
 
 
+/**
+ * @param {goog.ui.list.Data} data .
+ */
+goog.ui.List.prototype.setData = function(data) {
+
+  /**
+   * @type {goog.ui.list.Data} .
+   */
+  this.data_ = data;
+  this.updateParamsInternal();
+
+  /**
+   * Reset last range cache.
+   * @type {goog.math.Range}
+   */
+  this.lastRange = null;
+};
+
+
+/**
+ * @return {goog.ui.list.Data} data .
+ */
+goog.ui.List.prototype.getData = function() {
+  return this.data_;
+};
+
+
+/** @inheritDoc */
+goog.ui.List.prototype.getContentElement = function() {
+  return this.contentEl;
+};
+
+
 /***/
 goog.ui.List.prototype.updateParamsInternal = function() {
   this.lastPageIndex =
-      Math.ceil(this.data.getTotal() / this.rowCountPerPage) - 1;
+      Math.ceil(this.data_.getTotal() / this.rowCountPerPage) - 1;
   this.pageHeight = this.rowHeight * this.rowCountPerPage;
 
   // Cache for a speed.
-  this.lastPageRows = this.data.getTotal() % this.rowCountPerPage;
+  this.lastPageRows = this.data_.getTotal() % this.rowCountPerPage;
   if (this.lastPageRows == 0) this.lastPageRows = this.rowCountPerPage;
-
-  this.lastRange = new goog.math.Range(-1, -1);
 };
 
 
@@ -107,15 +141,17 @@ goog.ui.List.prototype.decorateInternal = function(element) {
   goog.base(this, 'decorateInternal', element);
 
   this.elementHeight = goog.style.getContentBoxSize(element).height;
-  this.contentEl = this.getElementByClass('goog-list-container');
 };
 
 
 /** @inheritDoc */
 goog.ui.List.prototype.createDom = function() {
   var dh = this.getDomHelper();
+  // TODO: topMarginEl & bottomMarginEl
   var element = dh.createDom('div', 'goog-list',
-    this.contentEl = dh.createDom('div', 'goog-list-container'));
+    this.topMarginEl = dh.createDom('div', 'goog-list-topmargin'),
+    this.contentEl = dh.createDom('div', 'goog-list-container'),
+    this.bottomMarginEl = dh.createDom('div', 'goog-list-bottommargin'));
   this.setElementInternal(element);
   this.elementHeight = goog.style.getContentBoxSize(element).height;
 };
@@ -125,7 +161,9 @@ goog.ui.List.prototype.createDom = function() {
 goog.ui.List.prototype.canDecorate = function(element) {
   if (element &&
       goog.dom.classes.has(element, 'goog-list') &&
-      goog.dom.getElementByClass('goog-list-container', element)) {
+      (this.topMarginEl = goog.dom.getElementByClass('goog-list-topmargin', element)) &&
+      (this.contentEl = goog.dom.getElementByClass('goog-list-container', element)) &&
+      (this.bottomMarginEl = goog.dom.getElementByClass('goog-list-bottommargin', element))) {
     return true;
   }
   return false;
@@ -134,23 +172,63 @@ goog.ui.List.prototype.canDecorate = function(element) {
 
 /***/
 goog.ui.List.prototype.updateVirualSizing = function() {
-  this.contentEl.style.paddingTop =
-      this.lastRange.start * this.pageHeight + 'px';
-  this.contentEl.style.paddingBottom = this.rowHeight * this.data.getTotal() -
-      this.lastRange.start * this.pageHeight - this.getChildCount() * this.rowHeight + 'px';
+  goog.asserts.assert(this.lastRange);
+  this.topMargin.set(this.lastRange.start * this.pageHeight);
+  this.bottomMargin.set(this.rowHeight * this.data_.getTotal() -
+      this.lastRange.start * this.pageHeight - this.getChildCount() * this.rowHeight);
 };
 
 
 /** @inheritDoc */
 goog.ui.List.prototype.enterDocument = function() {
+  goog.asserts.assert(this.data_,
+      'You should set data before "enterDocument".');
   goog.base(this, 'enterDocument');
   var eh = this.getHandler();
   var element = this.getElement();
 
+  goog.asserts.assert(this.topMarginEl && this.bottomMarginEl);
+  this.topMargin = new goog.ui.List.Margin_(this.topMarginEl);
+  this.bottomMargin = new goog.ui.List.Margin_(this.bottomMarginEl);
+
   eh.listen(element, goog.events.EventType.SCROLL, this.redraw)
-    .listen(this.data,
-        goog.ui.list.Data.EventType.UPDATE_TOTAL, this.handleTotalUpdate_);
+    .listen(this.data_,
+        goog.ui.list.Data.EventType.UPDATE_TOTAL, this.handleTotalUpdate_)
+    .listen(this.getContentElement(),
+        goog.events.EventType.CLICK, this.handleClick);
+
   this.redraw();
+};
+
+
+/**
+ * @param {goog.events.Event} e .
+ */
+goog.ui.List.prototype.handleClick = function(e) {
+  var row = this.findRowFromEventTarget(/**@type{Element}*/(e.target));
+  if (row) {
+    row.dispatchEvent(new goog.ui.List.ClickRowEvent(
+        this.data_.getRowByIndex(row.getIndex()), row));
+  }
+};
+
+
+/**
+ * @param {Element} et .
+ * @return {?goog.ui.List.Item} .
+ */
+goog.ui.List.prototype.findRowFromEventTarget = function(et) {
+  // TODO: Can be faster to seek row from a visible content.
+  var found;
+  goog.array.findIndex(this.getChildIds(), function(id, i) {
+    var child = this.getChild(id);
+    if (goog.dom.contains(child.getElement(), et)) {
+      found = /**@type{goog.ui.List.Item}*/(child);
+      return true;
+    }
+    return false;
+  }, this);
+  return found;
 };
 
 
@@ -196,7 +274,7 @@ goog.ui.List.prototype.redraw = function() {
     return;
   }
 
-  var lastRange = this.lastRange.start < 0 ? null : this.lastRange;
+  var lastRange = this.lastRange; // nullable
   this.lastRange = range;
 
   // We want to create only necessary rows, so if there is a row
@@ -221,7 +299,7 @@ goog.ui.List.prototype.redraw = function() {
   for (var i = range.start; i < range.end + 1; i++) {
     if (!lastRange || !goog.math.Range.containsPoint(lastRange, i)) {
       var count = this.calcRowCountInPage_(i);
-      fragment.appendChild(this.createPage(i, count))
+      fragment.appendChild(this.createPage(i, count));
     }
   }
 
@@ -233,7 +311,7 @@ goog.ui.List.prototype.redraw = function() {
 
   // We promise rows' data before append DOMs because we want
   // minimum manipulation of the DOM tree.
-  this.data.promiseRows(range.start * this.rowCountPerPage, this.getChildCount())
+  this.data_.promiseRows(range.start * this.rowCountPerPage, this.getChildCount())
     .wait(goog.bind(this.onResolved, this));
 
   // Finally append DOMs to the DOM tree.
@@ -254,7 +332,7 @@ goog.ui.List.prototype.redraw = function() {
  */
 goog.ui.List.prototype.onResolved = function(result) {
   this.forEachChild(function(row) {
-    var data = this.data.getRowByIndex(row.getIndex());
+    var data = this.data_.getRowByIndex(row.getIndex());
     if (data) {
       row.renderContent(data);
     }
@@ -268,7 +346,7 @@ goog.ui.List.prototype.onResolved = function(result) {
  * @return {number} .
  */
 goog.ui.List.prototype.calcRowCountInPage_ = function(pageIndex) {
-  var total = this.data.getTotal();
+  var total = this.data_.getTotal();
   if (total < (pageIndex + 1) * this.rowCountPerPage) {
     return total % this.rowCountPerPage;
   }
@@ -296,11 +374,23 @@ goog.ui.List.prototype.createPage = function(index, rowCount) {
 };
 
 
-/** @inheritDoc */
-goog.ui.List.prototype.disposeInternal = function() {
-  goog.base(this, 'disposeInternal');
-};
 
+/**
+ * An event dispached by list.Item.
+ * @constructor
+ * @extends {goog.events.Event}
+ * @param {goog.ds.DataNode} data .
+ * @param {Object=} row .
+ */
+goog.ui.List.ClickRowEvent = function(data, row) {
+  goog.base(this, goog.ui.list.EventType.CLICKROW, row);
+
+  /**
+   * @type {goog.ds.DataNode}
+   */
+  this.data = data;
+};
+goog.inherits(goog.ui.List.ClickRowEvent, goog.events.Event);
 
 
 
@@ -377,28 +467,50 @@ goog.ui.List.Item.prototype.renderContent = function(data) {
 };
 
 
-/** @inheritDoc */
-goog.ui.List.Item.prototype.decorateInternal = function(element) {
-  goog.base(this, 'decorateInternal', element);
+
+
+/**
+ * @private
+ * @constructor
+ * @extends {goog.Disposable}
+ */
+goog.ui.List.Margin_ = function(firstElement) {
+  goog.base(this);
+  this.elms = [firstElement];
 };
+goog.inherits(goog.ui.List.Margin_, goog.Disposable);
 
+goog.ui.List.Margin_.MAX_HEIGHT = 100 * 100 * 100;
 
-/** @inheritDoc */
-goog.ui.List.Item.prototype.canDecorate = function(element) {
-  if (element) {
-    return true;
+goog.ui.List.Margin_.prototype.set = function(height) {
+
+  // TODO: refactor
+
+  var countNeeded = Math.ceil(height / goog.ui.List.Margin_.MAX_HEIGHT);
+  var i;
+
+  if (!countNeeded) {
+    goog.style.setHeight(this.elms[0], 0);
+    i = 1;
+  } else {
+    for (i = 0; i < countNeeded; i++) {
+      // Cannot be zero.
+      var h = i == countNeeded - 1 &&
+              (height % goog.ui.List.Margin_.MAX_HEIGHT) ||
+              goog.ui.List.Margin_.MAX_HEIGHT;
+      if (!this.elms[i]) {
+        var el = goog.dom.createDom('div');
+        goog.dom.insertSiblingAfter(el, /**@type{Element}*/(goog.array.peek(this.elms)));
+        this.elms[i] = el;
+      }
+      goog.style.setHeight(this.elms[i], h);
+    }
   }
-  return false;
-};
 
+  for (;i < this.elms.length; i++) {
+    goog.dom.removeNode(this.elms[i]);
+    this.elms[i] = null;
+  }
 
-/** @inheritDoc */
-goog.ui.List.Item.prototype.enterDocument = function() {
-  goog.base(this, 'enterDocument');
-};
-
-
-/** @inheritDoc */
-goog.ui.List.Item.prototype.disposeInternal = function() {
-  goog.base(this, 'disposeInternal');
+  this.elms.length = Math.max(countNeeded, 1);
 };

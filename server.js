@@ -16,7 +16,7 @@ app.get('/', function(req, res) {
   res.redirect('piglovesyou/goog/demos/list.html');
 });
 
-var total = 400;
+var total = 90 * 1000; // 400;
 
 var createItems = function(offset, size) {
   var items = [];
@@ -39,9 +39,10 @@ var createResponse = function(offset, size) {
 };
 
 app.get('/api', function(req, res) {
-  res.writeHead(200, {'Content-Type': 'application/json;charset=UTF8'});
   var s = Math.min(+req.query.count, 50);
   var r = createResponse(+req.query.offset, s);
+  res.status(200);
+  res.set({ 'content-type': 'application/json' });
   res.end(JSON.stringify(r));
 });
 
