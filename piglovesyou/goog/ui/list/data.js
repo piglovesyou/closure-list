@@ -72,15 +72,15 @@ goog.ui.list.Data = function(url,
     var oldNodeName = oldone.getDataName();
     return newNodeName < oldNodeName ? -1 :
            newNodeName > oldNodeName ? 1 : 0;
-  });
+  }, this.root_);
   goog.ds.Util.makeReferenceNode(this.rows_, 'rows');
   this.root_.add(this.rows_);
 
   dm.addDataSource(this.root_);
 
   // Monitor a ds a list.Data belongs to.
-  dm.addListener(
-      goog.bind(this.handleDataChanged, this), '$' + this.getId() + '/...');
+  dm.addListener(goog.bind(this.handleTotalChanged, this), '$' + this.getId() + '/total');
+  dm.addListener(goog.bind(this.handleRowChanged, this), '$' + this.getId() + '/rows/...');
 };
 goog.inherits(goog.ui.list.Data, goog.events.EventTarget);
 
@@ -253,14 +253,23 @@ goog.ui.list.Data.prototype.getTotal = function() {
  * @protected
  * @param {string} path .
  */
-goog.ui.list.Data.prototype.handleDataChanged = function(path) {
-  var type;
-  if (goog.string.endsWith(path, '/total')) {
-    type = goog.ui.list.Data.EventType.UPDATE_TOTAL;
-  }
-  if (type) {
-    this.dispatchEvent(type);
-  }
+goog.ui.list.Data.prototype.handleRowChanged = function(path) {
+
+  // console.log(path);
+  // console.log(goog.ds.Expr.create(path).getNode());
+
+  // var ds = /** @type {?goog.ds.FastDataNode} */(
+  //           goog.ds.Expr.create(path).getNode());
+  // console.log(ds);
+};
+
+
+/**
+ * @protected
+ * @param {string} path .
+ */
+goog.ui.list.Data.prototype.handleTotalChanged = function(path) {
+  this.dispatchEvent(goog.ui.list.Data.EventType.UPDATE_TOTAL);
 };
 
 
@@ -368,15 +377,74 @@ goog.ui.list.Data.prototype.disposeInternal = function() {
  * We want sortedNodeList to have a name.
  * @param {string} name .
  * @param {Function} compareFn .
- * @param {Array.<goog.ds.DataNode>=} opt_nodes .
+ * @param {goog.ds.DataNode} parent .
  * @extends {goog.ds.SortedNodeList}
  * @constructor
  */
-goog.ui.list.Data.SortedNodeList = function(name, compareFn, opt_nodes) {
-  goog.base(this, compareFn, opt_nodes);
+goog.ui.list.Data.SortedNodeList = function(name, compareFn, parent) {
+  goog.base(this, compareFn);
   this.name_ = name;
+  this.parent_ = parent;
 };
 goog.inherits(goog.ui.list.Data.SortedNodeList, goog.ds.SortedNodeList);
+
+
+/** @inheritDoc */
+goog.ui.list.Data.SortedNodeList.prototype.add = function(node) {
+  goog.base(this, 'add', node);
+  var dm = goog.ds.DataManager.getInstance();
+  dm.fireDataChange(this.getDataPath() + goog.ds.STR_PATH_SEPARATOR +
+      '[' + node.getDataName().slice(goog.ui.list.Data.RowNodeNamePrefix.length) + ']');
+};
+
+
+/**
+ * @return {string} .
+ */
+goog.ui.list.Data.SortedNodeList.prototype.getDataPath = function() {
+  var parentPath = '';
+  var myName = this.getDataName();
+  if (this.getParent && this.getParent()) {
+    parentPath = this.getParent().getDataPath() +
+        (myName.indexOf(goog.ds.STR_ARRAY_START) != -1 ? '' :
+        goog.ds.STR_PATH_SEPARATOR);
+  }
+
+  return parentPath + myName;
+};
+
+
+/**
+ * @param {string} key .
+ * @return {goog.ds.DataNode} .
+ */
+goog.ui.list.Data.SortedNodeList.prototype.getChildNode = function(key) {
+  var index = this.getKeyAsNumber_(key);
+  if (index >= 0) {
+    return this.get(goog.ui.list.Data.RowNodeNamePrefix + index);
+  }
+  return null;
+};
+
+
+/**
+ * goog.ds.FastListNode.prototype.getKeyAsNumber_
+ * @param {string} key .
+ * @return {?number} .
+ * @private
+ */
+goog.ui.list.Data.SortedNodeList.prototype.getKeyAsNumber_ = function(key) {
+  if (key.charAt(0) == '[' && key.charAt(key.length - 1) == ']') {
+    return Number(key.substring(1, key.length - 1));
+  } else {
+    return null;
+  }
+};
+
+
+goog.ui.list.Data.SortedNodeList.prototype.getParent = function() {
+  return this.parent_;
+};
 
 
 /**
