@@ -194,6 +194,8 @@ goog.ui.List.prototype.enterDocument = function() {
   eh.listen(element, goog.events.EventType.SCROLL, this.redraw)
     .listen(this.data_,
         goog.ui.list.Data.EventType.UPDATE_TOTAL, this.handleTotalUpdate_)
+    .listen(this.data_,
+        goog.ui.list.Data.EventType.UPDATE_ROW, this.handleRowUpdate_)
     .listen(this.getContentElement(),
         goog.events.EventType.CLICK, this.handleClick);
 
@@ -224,6 +226,31 @@ goog.ui.List.prototype.findRowFromEventTarget = function(et) {
     var child = this.getChild(id);
     if (goog.dom.contains(child.getElement(), et)) {
       found = /**@type{goog.ui.List.Item}*/(child);
+      return true;
+    }
+    return false;
+  }, this);
+  return found;
+};
+
+
+/**
+ * @private
+ * @param {goog.events.EventLike} e .
+ */
+goog.ui.List.prototype.handleRowUpdate_ = function(e) {
+  var row = this.getRowByIndex(/**@type{number}*/(e.index));
+  // There can be none for some reasons.
+  if (row) row.renderContent(/**@type{goog.ui.list.Data.RowNode}*/(e.row));
+};
+
+
+goog.ui.List.prototype.getRowByIndex = function(index) {
+  var found;
+  goog.array.find(this.getChildIds(), function(id) {
+    var row = this.getChild(id);
+    if (row.getIndex() == index) {
+      found = row;
       return true;
     }
     return false;
@@ -309,10 +336,16 @@ goog.ui.List.prototype.redraw = function() {
   // a real size and position.
   this.updateVirualSizing();
 
+  // TODO: Refactor. Use "node" as a row data.
   // We promise rows' data before append DOMs because we want
   // minimum manipulation of the DOM tree.
-  this.data_.promiseRows(range.start * this.rowCountPerPage, this.getChildCount())
-    .wait(goog.bind(this.onResolved, this));
+  goog.array.forEach(this.data_.collect(range.start * this.rowCountPerPage, this.getChildCount()), function(node) {
+    var row = this.getRowByIndex(node.getIndex())
+    // There can be none for some reasons.
+    if (row) row.renderContent(node);
+  }, this);
+  
+  //   .wait(goog.bind(this.onResolved, this));
 
   // Finally append DOMs to the DOM tree.
   if (!lastRange || lastRange.end < range.end) {
@@ -331,12 +364,12 @@ goog.ui.List.prototype.redraw = function() {
  * @param {goog.result.SimpleResult} result .
  */
 goog.ui.List.prototype.onResolved = function(result) {
-  this.forEachChild(function(row) {
-    var data = this.data_.getRowByIndex(row.getIndex());
-    if (data) {
-      row.renderContent(data);
-    }
-  }, this);
+  // this.forEachChild(function(row) {
+  //   var data = this.data_.getRowByIndex(row.getIndex());
+  //   if (data) {
+  //     row.renderContent(data);
+  //   }
+  // }, this);
 };
 
 
@@ -458,8 +491,6 @@ goog.ui.List.Item.prototype.createDom = function() {
 
 
 /**
- * TODO: Accept renderer from outside.
- *
  * @param {goog.ds.FastDataNode} data .
  */
 goog.ui.List.Item.prototype.renderContent = function(data) {
