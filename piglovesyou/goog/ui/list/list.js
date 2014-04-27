@@ -42,6 +42,9 @@ goog.require('goog.ui.list.Data');
 goog.ui.List = function(rowRenderer, opt_rowCountPerPage, opt_domHelper) {
   goog.base(this, opt_domHelper);
 
+  /**
+   * @type {number}
+   */
   this.rowHeight = 60;
 
   /**
@@ -196,10 +199,26 @@ goog.ui.List.prototype.enterDocument = function() {
         goog.ui.list.Data.EventType.UPDATE_TOTAL, this.handleTotalUpdate_)
     .listen(this.data_,
         goog.ui.list.Data.EventType.UPDATE_ROW, this.handleRowUpdate_)
+    .listenOnce(this.data_,
+        goog.ui.list.Data.EventType.UPDATE_ROW, this.examinFirstRowHeight)
     .listen(this.getContentElement(),
         goog.events.EventType.CLICK, this.handleClick);
 
   this.redraw();
+};
+
+
+goog.ui.List.prototype.examinFirstRowHeight = function() {
+  var c = this.getChildAt(0);
+  if (!c) return;
+  goog.style.setHeight(c.getElement(), '');
+  var size = goog.style.getBorderBoxSize(c.getElement());
+  this.rowHeight = size.height;
+  this.updateParamsInternal();
+  this.forEachChild(function(r) {
+    goog.style.setHeight(r.getElement(), size.height);
+  });
+  this.updateVirualSizing();
 };
 
 
@@ -305,7 +324,7 @@ goog.ui.List.prototype.redraw = function() {
   this.lastRange = range;
 
   // We want to create only necessary rows, so if there is a row
-  // that will be needed in this time as well, we keep it.
+  // that will be needed at this time as well, we keep it.
   if (!lastRange || !goog.math.Range.hasIntersection(range, lastRange)) {
     this.removeChildren(true);
   } else {
@@ -452,16 +471,15 @@ goog.ui.List.Item = function(index, height, opt_renderer, opt_domHelper) {
   goog.base(this, opt_domHelper);
 
   /**
-   * @private
    * @type {number}
    */
-  this.index_ = index;
+  this.height_ = height;
 
   /**
    * @private
    * @type {number}
    */
-  this.height_ = height;
+  this.index_ = index;
 
   /**
    * @private
