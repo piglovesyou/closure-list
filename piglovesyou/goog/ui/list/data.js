@@ -318,7 +318,7 @@ goog.ui.list.Data.prototype.collect = function(from, count) {
 
         if (me.keepTotalUptodate_) {
           var lastTotal = me.total_.get();
-          var newTotal = goog.getObjectByName(me.objectNameTotalInJson_, json);
+          var newTotal = +goog.getObjectByName(me.objectNameTotalInJson_, json);
           if (goog.isNumber(newTotal) && lastTotal != newTotal) {
             me.total_.set(newTotal);
           }
