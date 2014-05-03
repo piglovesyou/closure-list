@@ -45,7 +45,7 @@ goog.ui.List = function(rowRenderer, opt_rowCountPerPage, opt_domHelper) {
   /**
    * @type {number}
    */
-  this.rowHeight = 60;
+  this.rowHeight = 80; // This will overridden at the first row rendering.
 
   /**
    * @type {number}
@@ -204,7 +204,19 @@ goog.ui.List.prototype.enterDocument = function() {
     .listen(this.getContentElement(),
         goog.events.EventType.CLICK, this.handleClick);
 
+  this.installStylesheet_();
+
   this.redraw();
+};
+
+
+goog.ui.List.prototype.installStylesheet_ = function() {
+  var element = this.getElement();
+  var id = element.id || (element.id = 'goog-list-' + goog.getUid(element));
+  var styleSheet = new goog.ui.List.StyleSheet(id);
+  styleSheet.set('.goog-list-container', 'overflow', 'hidden');
+  styleSheet.set('.goog-list-row', 'box-sizing', 'border-box');
+  this.styleSheet = styleSheet;
 };
 
 
@@ -213,12 +225,22 @@ goog.ui.List.prototype.examinFirstRowHeight = function() {
   if (!c) return;
   goog.style.setHeight(c.getElement(), '');
   var size = goog.style.getBorderBoxSize(c.getElement());
-  this.rowHeight = size.height;
+
+  this.setRowHeight_(size.height);
+
   this.updateParamsInternal();
-  this.forEachChild(function(r) {
-    goog.style.setHeight(r.getElement(), size.height);
-  });
   this.updateVirualSizing();
+};
+
+
+/**
+ * @private
+ * @param {number} h .
+ */
+goog.ui.List.prototype.setRowHeight_ = function(h) {
+  this.rowHeight = h;
+  this.styleSheet.set('.goog-list-row', 'height', h + 'px');
+  this.styleSheet.update();
 };
 
 
@@ -417,7 +439,7 @@ goog.ui.List.prototype.createPage = function(index, rowCount) {
   var start = index * this.rowCountPerPage;
   var end = start + rowCount;
   for (var i = start; i < end; i++) {
-    var row = new this.rowClassRef_(i, this.rowHeight, this.rowRenderer_, dh);
+    var row = new this.rowClassRef_(i, this.rowRenderer_, dh);
     row.createDom();
     dh.appendChild(page, row.getElement());
     this.addChild(row);
@@ -462,18 +484,12 @@ goog.inherits(goog.ui.List.ClickRowEvent, goog.events.Event);
 /**
  * @constructor
  * @param {number} index .
- * @param {number} height .
  * @param {Function=} opt_renderer .
  * @param {goog.dom.DomHelper=} opt_domHelper .
  * @extends {goog.ui.Component}
  */
-goog.ui.List.Item = function(index, height, opt_renderer, opt_domHelper) {
+goog.ui.List.Item = function(index, opt_renderer, opt_domHelper) {
   goog.base(this, opt_domHelper);
-
-  /**
-   * @type {number}
-   */
-  this.height_ = height;
 
   /**
    * @private
@@ -500,10 +516,7 @@ goog.ui.List.Item.prototype.getIndex = function() {
 /** @inheritDoc */
 goog.ui.List.Item.prototype.createDom = function() {
   var dh = this.getDomHelper();
-  // XXX: Adding height is kind of expensive process.
-  // We can relegate this to a module user.
   this.setElementInternal(dh.createDom('div', {
-    style: 'height:' + this.height_ + 'px'
   }));
 };
 
@@ -593,13 +606,13 @@ goog.ui.List.StyleSheet.prototype.set = function(selector, property, value) {
 };
 
 goog.ui.List.StyleSheet.prototype.update = function() {
-  this.styleSheet = goog.style.installStyles(this.buildStyles_, this.styleSheet);
+  this.styleSheet = goog.style.installStyles(this.buildStyles_(), this.styleSheet);
 };
 
 goog.ui.List.StyleSheet.prototype.buildStyles_ = function() {
   var rv = '';
   for (var selector in this.styles) {
-    rv += this.id + ' ' + selector + '{';
+    rv += '#' + this.id + ' ' + selector + '{';
     for (var property in this.styles[selector]) {
       rv += property + ':' + this.styles[selector][property] + ';';
     }
