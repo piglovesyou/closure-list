@@ -45,7 +45,7 @@ goog.ui.List = function(rowRenderer, opt_rowCountPerPage, opt_domHelper) {
   /**
    * @type {number}
    */
-  this.rowHeight = 80; // This will overridden at the first row rendering.
+  this.itemHeight = 80; // This will overridden at the first row rendering.
 
   /**
    * @type {number}
@@ -131,7 +131,7 @@ goog.ui.List.prototype.getContentElement = function() {
 goog.ui.List.prototype.updateParamsInternal = function() {
   this.lastPageIndex =
       Math.ceil(this.data_.getTotal() / this.rowCountPerPage) - 1;
-  this.pageHeight = this.rowHeight * this.rowCountPerPage;
+  this.pageHeight = this.itemHeight * this.rowCountPerPage;
 
   // Cache for a speed.
   this.lastPageRows = this.data_.getTotal() % this.rowCountPerPage;
@@ -164,9 +164,12 @@ goog.ui.List.prototype.createDom = function() {
 goog.ui.List.prototype.canDecorate = function(element) {
   if (element &&
       goog.dom.classes.has(element, 'goog-list') &&
-      (this.topMarginEl = goog.dom.getElementByClass('goog-list-topmargin', element)) &&
-      (this.contentEl = goog.dom.getElementByClass('goog-list-container', element)) &&
-      (this.bottomMarginEl = goog.dom.getElementByClass('goog-list-bottommargin', element))) {
+      (this.topMarginEl =
+          goog.dom.getElementByClass('goog-list-topmargin', element)) &&
+      (this.contentEl =
+          goog.dom.getElementByClass('goog-list-container', element)) &&
+      (this.bottomMarginEl =
+          goog.dom.getElementByClass('goog-list-bottommargin', element))) {
     return true;
   }
   return false;
@@ -177,8 +180,10 @@ goog.ui.List.prototype.canDecorate = function(element) {
 goog.ui.List.prototype.updateVirualSizing = function() {
   goog.asserts.assert(this.lastRange);
   this.topMargin.set(this.lastRange.start * this.pageHeight);
-  this.bottomMargin.set(this.rowHeight * this.data_.getTotal() -
-      this.lastRange.start * this.pageHeight - this.getChildCount() * this.rowHeight);
+  this.bottomMargin.set(
+      this.itemHeight * this.data_.getTotal() -
+      this.lastRange.start * this.pageHeight -
+      this.getChildCount() * this.itemHeight);
 };
 
 
@@ -200,7 +205,7 @@ goog.ui.List.prototype.enterDocument = function() {
     .listen(this.data_,
         goog.ui.list.Data.EventType.UPDATE_ROW, this.handleRowUpdate_)
     .listenOnce(this.data_,
-        goog.ui.list.Data.EventType.UPDATE_ROW, this.examinFirstRowHeight)
+        goog.ui.list.Data.EventType.UPDATE_ROW, this.examinFirstItemHeight)
     .listen(this.getContentElement(),
         goog.events.EventType.CLICK, this.handleClick);
 
@@ -210,23 +215,29 @@ goog.ui.List.prototype.enterDocument = function() {
 };
 
 
+/**
+ * @private
+ */
 goog.ui.List.prototype.installStylesheet_ = function() {
   var element = this.getElement();
   var id = element.id || (element.id = 'goog-list-' + goog.getUid(element));
   var styleSheet = new goog.ui.List.StyleSheet(id);
   styleSheet.set('.goog-list-container', 'overflow', 'hidden');
-  styleSheet.set('.goog-list-row', 'box-sizing', 'border-box');
+  styleSheet.set('.goog-list-item', 'box-sizing', 'border-box');
   this.styleSheet = styleSheet;
 };
 
 
-goog.ui.List.prototype.examinFirstRowHeight = function() {
+/**
+ * Examin the first rendered row and get its height.
+ */
+goog.ui.List.prototype.examinFirstItemHeight = function() {
   var c = this.getChildAt(0);
   if (!c) return;
   goog.style.setHeight(c.getElement(), '');
   var size = goog.style.getBorderBoxSize(c.getElement());
 
-  this.setRowHeight_(size.height);
+  this.setItemHeight_(size.height);
 
   this.updateParamsInternal();
   this.updateVirualSizing();
@@ -237,9 +248,9 @@ goog.ui.List.prototype.examinFirstRowHeight = function() {
  * @private
  * @param {number} h .
  */
-goog.ui.List.prototype.setRowHeight_ = function(h) {
-  this.rowHeight = h;
-  this.styleSheet.set('.goog-list-row', 'height', h + 'px');
+goog.ui.List.prototype.setItemHeight_ = function(h) {
+  this.itemHeight = h;
+  this.styleSheet.set('.goog-list-item', 'height', h + 'px');
   this.styleSheet.update();
 };
 
@@ -248,10 +259,10 @@ goog.ui.List.prototype.setRowHeight_ = function(h) {
  * @param {goog.events.Event} e .
  */
 goog.ui.List.prototype.handleClick = function(e) {
-  var row = this.findRowFromEventTarget(/**@type{Element}*/(e.target));
-  if (row) {
-    row.dispatchEvent(new goog.ui.List.ClickRowEvent(
-        this.data_.getRowByIndex(row.getIndex()), row));
+  var item = this.findRowFromEventTarget(/**@type{Element}*/(e.target));
+  if (item) {
+    item.dispatchEvent(new goog.ui.List.ClickRowEvent(
+        this.data_.getRowByIndex(item.getIndex()), item));
   }
 };
 
@@ -261,7 +272,7 @@ goog.ui.List.prototype.handleClick = function(e) {
  * @return {?goog.ui.List.Item} .
  */
 goog.ui.List.prototype.findRowFromEventTarget = function(et) {
-  // TODO: Can be faster to seek row from a visible content.
+  // TODO: Can be faster to seek item from a visible content.
   var found;
   goog.array.findIndex(this.getChildIds(), function(id, i) {
     var child = this.getChild(id);
@@ -280,13 +291,17 @@ goog.ui.List.prototype.findRowFromEventTarget = function(et) {
  * @param {goog.events.EventLike} e .
  */
 goog.ui.List.prototype.handleRowUpdate_ = function(e) {
-  var row = this.getRowByIndex(/**@type{number}*/(e.index));
+  var row = this.getItemByIndex(/**@type{number}*/(e.index));
   // There can be none for some reasons.
   if (row) row.renderContent(/**@type{goog.ui.list.Data.RowNode}*/(e.row));
 };
 
 
-goog.ui.List.prototype.getRowByIndex = function(index) {
+/**
+ * @param {number} index .
+ * @return {goog.ui.List.Item} .
+ */
+goog.ui.List.prototype.getItemByIndex = function(index) {
   var found;
   goog.array.find(this.getChildIds(), function(id) {
     var row = this.getChild(id);
@@ -377,13 +392,14 @@ goog.ui.List.prototype.redraw = function() {
   // a real size and position.
   this.updateVirualSizing();
 
-  // TODO: Refactor. Use "node" as a row data.
   // We promise rows' data before append DOMs because we want
   // minimum manipulation of the DOM tree.
-  goog.array.forEach(this.data_.collect(range.start * this.rowCountPerPage, this.getChildCount()), function(node) {
-    var row = this.getRowByIndex(node.getIndex());
+  goog.array.forEach(this.data_.collect(
+      range.start * this.rowCountPerPage,
+      this.getChildCount()), function(node) {
+    var item = this.getItemByIndex(node.getIndex());
     // There can be none for some reasons.
-    if (row) row.renderContent(node);
+    if (item) item.renderContent(node);
   }, this);
 
   //   .wait(goog.bind(this.onResolved, this));
@@ -398,19 +414,6 @@ goog.ui.List.prototype.redraw = function() {
   this.forEachChild(function(c) {
     if (!c.isInDocument()) c.enterDocument();
   });
-};
-
-
-/**
- * @param {goog.result.SimpleResult} result .
- */
-goog.ui.List.prototype.onResolved = function(result) {
-  // this.forEachChild(function(row) {
-  //   var data = this.data_.getRowByIndex(row.getIndex());
-  //   if (data) {
-  //     row.renderContent(data);
-  //   }
-  // }, this);
 };
 
 
@@ -439,10 +442,10 @@ goog.ui.List.prototype.createPage = function(index, rowCount) {
   var start = index * this.rowCountPerPage;
   var end = start + rowCount;
   for (var i = start; i < end; i++) {
-    var row = new this.rowClassRef_(i, this.rowRenderer_, dh);
-    row.createDom();
-    dh.appendChild(page, row.getElement());
-    this.addChild(row);
+    var item = new this.rowClassRef_(i, this.rowRenderer_, dh);
+    item.createDom();
+    dh.appendChild(page, item.getElement());
+    this.addChild(item);
   }
   return page;
 };
@@ -535,6 +538,7 @@ goog.ui.List.Item.prototype.renderContent = function(data) {
  * @private
  * @constructor
  * @extends {goog.Disposable}
+ * @param {Element} firstElement .
  */
 goog.ui.List.Margin_ = function(firstElement) {
   goog.base(this);
@@ -542,8 +546,14 @@ goog.ui.List.Margin_ = function(firstElement) {
 };
 goog.inherits(goog.ui.List.Margin_, goog.Disposable);
 
+/**
+ * @type {number}
+ */
 goog.ui.List.Margin_.MAX_HEIGHT = 100 * 100 * 100;
 
+/**
+ * @param {number} height .
+ */
 goog.ui.List.Margin_.prototype.set = function(height) {
 
   // TODO: refactor
@@ -562,7 +572,8 @@ goog.ui.List.Margin_.prototype.set = function(height) {
               goog.ui.List.Margin_.MAX_HEIGHT;
       if (!this.elms[i]) {
         var el = goog.dom.createDom('div');
-        goog.dom.insertSiblingAfter(el, /**@type{Element}*/(goog.array.peek(this.elms)));
+        goog.dom.insertSiblingAfter(el,
+            /**@type{Element}*/(goog.array.peek(this.elms)));
         this.elms[i] = el;
       }
       goog.style.setHeight(this.elms[i], h);
@@ -600,15 +611,29 @@ goog.ui.List.StyleSheet = function(id) {
   this.styleSheet;
 };
 
+/**
+ * @param {string} selector .
+ * @param {string} property .
+ * @param {string} value .
+ */
 goog.ui.List.StyleSheet.prototype.set = function(selector, property, value) {
   var sets = this.styles[selector] || (this.styles[selector] = {});
   sets[property] = value;
 };
 
+/**
+ * Write a stylesheet and apply it on a document.
+ */
 goog.ui.List.StyleSheet.prototype.update = function() {
-  this.styleSheet = goog.style.installStyles(this.buildStyles_(), this.styleSheet);
+  this.styleSheet =
+      goog.style.installStyles(this.buildStyles_(), this.styleSheet);
 };
 
+/**
+ * Build stylesheet string.
+ * @private
+ * @return {string} .
+ */
 goog.ui.List.StyleSheet.prototype.buildStyles_ = function() {
   var rv = '';
   for (var selector in this.styles) {
