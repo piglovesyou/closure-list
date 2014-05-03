@@ -359,11 +359,11 @@ goog.ui.List.prototype.redraw = function() {
   // We promise rows' data before append DOMs because we want
   // minimum manipulation of the DOM tree.
   goog.array.forEach(this.data_.collect(range.start * this.rowCountPerPage, this.getChildCount()), function(node) {
-    var row = this.getRowByIndex(node.getIndex())
+    var row = this.getRowByIndex(node.getIndex());
     // There can be none for some reasons.
     if (row) row.renderContent(node);
   }, this);
-  
+
   //   .wait(goog.bind(this.onResolved, this));
 
   // Finally append DOMs to the DOM tree.
@@ -556,10 +556,54 @@ goog.ui.List.Margin_.prototype.set = function(height) {
     }
   }
 
-  for (;i < this.elms.length; i++) {
+  for (; i < this.elms.length; i++) {
     goog.dom.removeNode(this.elms[i]);
     this.elms[i] = null;
   }
 
   this.elms.length = Math.max(countNeeded, 1);
+};
+
+
+
+
+
+/**
+ * @constructor
+ * @param {string} id .
+ */
+goog.ui.List.StyleSheet = function(id) {
+
+  /**
+   * Used as all selector prefix.
+   */
+  this.id = id;
+
+  /**
+   * styles[selector][property][value]
+   */
+  this.styles = {};
+
+  this.styleSheet;
+};
+
+goog.ui.List.StyleSheet.prototype.set = function(selector, property, value) {
+  var sets = this.styles[selector] || (this.styles[selector] = {});
+  sets[property] = value;
+};
+
+goog.ui.List.StyleSheet.prototype.update = function() {
+  this.styleSheet = goog.style.installStyles(this.buildStyles_, this.styleSheet);
+};
+
+goog.ui.List.StyleSheet.prototype.buildStyles_ = function() {
+  var rv = '';
+  for (var selector in this.styles) {
+    rv += this.id + ' ' + selector + '{';
+    for (var property in this.styles[selector]) {
+      rv += property + ':' + this.styles[selector][property] + ';';
+    }
+    rv += '}';
+  }
+  return rv;
 };
