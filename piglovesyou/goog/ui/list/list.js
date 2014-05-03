@@ -28,12 +28,11 @@ goog.require('goog.ui.list.Data');
 
 /**
  * @constructor
- * @param {Function|function(new:goog.ui.List.Item,
- *         number, number, Function=, goog.dom.DomHelper=)} rowRenderer
+ * @param {Function|function(new:goog.ui.List.Item, ...[*])} rowRenderer
  *    You can pass two types of params:
  *      - If it's function, used as a renderer which called in
  *        "renderContent" and takes 1 item argument from json.
- *      - If it's an instance of goog.ui.List.Item, we always generate a row
+ *      - If it's an instance of goog.ui.List.Item, we always generate a item
  *        by it. The class has to implement its own "renderContent" method.
  * @param {number=} opt_rowCountPerPage Used as a request param.
  * @param {goog.dom.DomHelper=} opt_domHelper .
@@ -45,7 +44,7 @@ goog.ui.List = function(rowRenderer, opt_rowCountPerPage, opt_domHelper) {
   /**
    * @type {number}
    */
-  this.itemHeight = 80; // This will overridden at the first row rendering.
+  this.itemHeight = 80; // This will overridden at the first item rendering.
 
   /**
    * @type {number}
@@ -55,10 +54,9 @@ goog.ui.List = function(rowRenderer, opt_rowCountPerPage, opt_domHelper) {
 
   /**
    * @private
-   * @type {function(new:goog.ui.List.Item,
-   *        number, number, Function=, goog.dom.DomHelper=)}
+   * @type {function(new:goog.ui.List.Item, ...[*])}
    */
-  this.rowClassRef_;
+  this.itemClassRef_;
 
   /**
    * @private
@@ -67,12 +65,12 @@ goog.ui.List = function(rowRenderer, opt_rowCountPerPage, opt_domHelper) {
   this.rowRenderer_;
 
   if (rowRenderer.prototype instanceof goog.ui.List.Item) {
-    this.rowClassRef_ = /**@type {function(new:goog.ui.List.Item,
-        number, number, Function=, goog.dom.DomHelper=)}*/(rowRenderer);
+    this.itemClassRef_ =
+        /**@type {function(new:goog.ui.List.Item, ...[*])}*/(rowRenderer);
     this.rowRenderer_ = goog.isFunction;
   } else if (goog.isFunction(rowRenderer)) {
-    this.rowClassRef_ = /**@type {function(new:goog.ui.List.Item,
-        number, number, Function=, goog.dom.DomHelper=)}*/(goog.ui.List.Item);
+    this.itemClassRef_ =
+        /**@type {function(new:goog.ui.List.Item, ...[*])}*/(goog.ui.List.Item);
     this.rowRenderer_ = rowRenderer;
   } else {
     goog.asserts.fail('You need pass renderer or render class');
@@ -221,7 +219,7 @@ goog.ui.List.prototype.enterDocument = function() {
 goog.ui.List.prototype.installStylesheet_ = function() {
   var element = this.getElement();
   var id = element.id || (element.id = 'goog-list-' + goog.getUid(element));
-  var styleSheet = new goog.ui.List.StyleSheet(id);
+  var styleSheet = new goog.ui.List.StyleSheet(id, element);
   styleSheet.set('.goog-list-container', 'overflow', 'hidden');
   styleSheet.set('.goog-list-item', 'box-sizing', 'border-box');
   this.styleSheet = styleSheet;
@@ -229,7 +227,7 @@ goog.ui.List.prototype.installStylesheet_ = function() {
 
 
 /**
- * Examin the first rendered row and get its height.
+ * Examin the first rendered item and get its height.
  */
 goog.ui.List.prototype.examinFirstItemHeight = function() {
   var c = this.getChildAt(0);
@@ -261,7 +259,7 @@ goog.ui.List.prototype.setItemHeight_ = function(h) {
 goog.ui.List.prototype.handleClick = function(e) {
   var item = this.findRowFromEventTarget(/**@type{Element}*/(e.target));
   if (item) {
-    item.dispatchEvent(new goog.ui.List.ClickRowEvent(
+    item.dispatchEvent(new goog.ui.List.ClickItemEvent(
         this.data_.getRowByIndex(item.getIndex()), item));
   }
 };
@@ -291,9 +289,9 @@ goog.ui.List.prototype.findRowFromEventTarget = function(et) {
  * @param {goog.events.EventLike} e .
  */
 goog.ui.List.prototype.handleRowUpdate_ = function(e) {
-  var row = this.getItemByIndex(/**@type{number}*/(e.index));
+  var item = this.getItemByIndex(/**@type{number}*/(e.index));
   // There can be none for some reasons.
-  if (row) row.renderContent(/**@type{goog.ui.list.Data.RowNode}*/(e.row));
+  if (item) item.renderContent(/**@type{goog.ui.list.Data.RowNode}*/(e.row));
 };
 
 
@@ -304,9 +302,9 @@ goog.ui.List.prototype.handleRowUpdate_ = function(e) {
 goog.ui.List.prototype.getItemByIndex = function(index) {
   var found;
   goog.array.find(this.getChildIds(), function(id) {
-    var row = this.getChild(id);
-    if (row.getIndex() == index) {
-      found = row;
+    var item = /** @type {goog.ui.List.Item} */(this.getChild(id));
+    if (item.getIndex() == index) {
+      found = item;
       return true;
     }
     return false;
@@ -360,7 +358,7 @@ goog.ui.List.prototype.redraw = function() {
   var lastRange = this.lastRange; // nullable
   this.lastRange = range;
 
-  // We want to create only necessary rows, so if there is a row
+  // We want to create only necessary rows, so if there is a item
   // that will be needed at this time as well, we keep it.
   if (!lastRange || !goog.math.Range.hasIntersection(range, lastRange)) {
     this.removeChildren(true);
@@ -442,7 +440,7 @@ goog.ui.List.prototype.createPage = function(index, rowCount) {
   var start = index * this.rowCountPerPage;
   var end = start + rowCount;
   for (var i = start; i < end; i++) {
-    var item = new this.rowClassRef_(i, this.rowRenderer_, dh);
+    var item = new this.itemClassRef_(i, this.rowRenderer_, dh);
     item.createDom();
     dh.appendChild(page, item.getElement());
     this.addChild(item);
@@ -459,7 +457,7 @@ goog.ui.List.prototype.createPage = function(index, rowCount) {
  * @param {goog.ds.DataNode} data .
  * @param {Object=} row .
  */
-goog.ui.List.ClickRowEvent = function(data, row) {
+goog.ui.List.ClickItemEvent = function(data, row) {
   goog.base(this, goog.ui.list.EventType.CLICKROW, row);
 
   /**
@@ -467,7 +465,7 @@ goog.ui.List.ClickRowEvent = function(data, row) {
    */
   this.data = data;
 };
-goog.inherits(goog.ui.List.ClickRowEvent, goog.events.Event);
+goog.inherits(goog.ui.List.ClickItemEvent, goog.events.Event);
 
 
 
@@ -596,7 +594,7 @@ goog.ui.List.Margin_.prototype.set = function(height) {
  * @constructor
  * @param {string} id .
  */
-goog.ui.List.StyleSheet = function(id) {
+goog.ui.List.StyleSheet = function(id, element) {
 
   /**
    * Used as all selector prefix.
@@ -604,11 +602,19 @@ goog.ui.List.StyleSheet = function(id) {
   this.id = id;
 
   /**
+   * @type {Element}
+   */
+  this.element = element;
+
+  /**
    * styles[selector][property][value]
    */
   this.styles = {};
 
-  this.styleSheet;
+  /**
+   * @type {Element|StyleSheet}
+   */
+  this.styleSheet = null;
 };
 
 /**
@@ -625,8 +631,11 @@ goog.ui.List.StyleSheet.prototype.set = function(selector, property, value) {
  * Write a stylesheet and apply it on a document.
  */
 goog.ui.List.StyleSheet.prototype.update = function() {
+  if (this.styleSheet) {
+    goog.style.uninstallStyles(this.styleSheet);
+  }
   this.styleSheet =
-      goog.style.installStyles(this.buildStyles_(), this.styleSheet);
+      goog.style.installStyles(this.buildStyles_(), this.element);
 };
 
 /**

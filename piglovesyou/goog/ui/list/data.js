@@ -79,8 +79,10 @@ goog.ui.list.Data = function(url,
   dm.addDataSource(this.root_);
 
   // Monitor a ds a list.Data belongs to.
-  dm.addListener(goog.bind(this.handleTotalChanged, this), '$' + this.getId() + '/total');
-  dm.addListener(goog.bind(this.handleRowChanged, this), '$' + this.getId() + '/rows/...');
+  dm.addListener(goog.bind(this.handleTotalChanged, this),
+      '$' + this.getId() + '/total');
+  dm.addListener(goog.bind(this.handleRowChanged, this),
+      '$' + this.getId() + '/rows/...');
 };
 goog.inherits(goog.ui.list.Data, goog.events.EventTarget);
 
@@ -399,8 +401,9 @@ goog.inherits(goog.ui.list.Data.SortedNodeList, goog.ds.SortedNodeList);
 goog.ui.list.Data.SortedNodeList.prototype.add = function(node) {
   goog.base(this, 'add', node);
   var dm = goog.ds.DataManager.getInstance();
-  dm.fireDataChange(this.getDataPath() + goog.ds.STR_PATH_SEPARATOR +
-      '[' + node.getDataName().slice(goog.ui.list.Data.RowNodeNamePrefix.length) + ']');
+  dm.fireDataChange(this.getDataPath() + goog.ds.STR_PATH_SEPARATOR + '[' +
+      node.getDataName().slice(goog.ui.list.Data.RowNodeNamePrefix.length) +
+  ']');
 };
 
 
@@ -437,7 +440,6 @@ goog.ui.list.Data.SortedNodeList.prototype.getChildNode = function(key) {
  * goog.ds.FastListNode.prototype.getKeyAsNumber_
  * @param {string} key .
  * @return {?number} .
- * @private
  */
 goog.ui.list.Data.SortedNodeList.prototype.getKeyAsNumber = function(key) {
   if (key.charAt(0) == '[' && key.charAt(key.length - 1) == ']') {
@@ -448,6 +450,9 @@ goog.ui.list.Data.SortedNodeList.prototype.getKeyAsNumber = function(key) {
 };
 
 
+/**
+ * @return {goog.ds.DataNode} .
+ */
 goog.ui.list.Data.SortedNodeList.prototype.getParent = function() {
   return this.parent_;
 };
@@ -474,6 +479,7 @@ goog.ui.list.Data.RowNode = function(index, root, dataName, opt_parent) {
 
   /**
    * @type {number}
+   * @private
    */
   this.index_ = index;
 };
