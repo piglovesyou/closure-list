@@ -84,7 +84,8 @@ goog.exportSymbol('goog.ui.List', goog.ui.List);
  * @enum {string}
  */
 goog.ui.list.EventType = {
-  CLICKROW: 'clickrow'
+  CLICKROW: 'clickrow',
+  UPDATE_TOTAL: 'updatetotal'
 };
 
 
@@ -333,6 +334,11 @@ goog.ui.List.prototype.getItemByIndex = function(index) {
 goog.ui.List.prototype.handleTotalUpdate_ = function(e) {
   this.updateParamsInternal();
   this.updateVirualSizing();
+
+  this.dispatchEvent({
+    type: goog.ui.list.EventType.UPDATE_TOTAL,
+    total: e.target.getTotal()
+  });
 };
 
 
