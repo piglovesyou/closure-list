@@ -197,6 +197,14 @@ goog.ui.List.prototype.canDecorate = function(element) {
 /***/
 goog.ui.List.prototype.updateVirualSizing = function() {
   goog.asserts.assert(this.lastRange);
+
+  if (this.lastRange.start == 0 && this.data_.getTotal() < this.getChildCount()) {
+    goog.array.forEach(this.getChildIds().slice(this.data_.getTotal()), function(id) {
+      var child = this.removeChild(this.getChild(id), true);
+      child.dispose();
+    }, this);
+  }
+
   this.topMargin.set(this.lastRange.start * this.pageHeight);
   this.bottomMargin.set(
       this.itemHeight * this.data_.getTotal() -
