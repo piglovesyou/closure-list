@@ -96,11 +96,30 @@ goog.ui.list.RowNodeNamePrefix = goog.ui.list.Data.RowNodeNamePrefix;
  * @param {goog.ui.list.Data} data .
  */
 goog.ui.List.prototype.setData = function(data) {
+  if (this.data_) {
+    this.data_.dispose();
+  }
+  if (this.dataHandler_) {
+    this.dataHandler_.dispose();
+  }
 
   /**
    * @type {goog.ui.list.Data} .
    */
   this.data_ = data;
+
+  /**
+   * @type {goog.events.EventHandler}
+   */
+  this.dataHandler_ = new goog.events.EventHandler(this);
+  this.dataHandler_
+    .listen(this.data_,
+        goog.ui.list.Data.EventType.UPDATE_TOTAL, this.handleTotalUpdate_)
+    .listen(this.data_,
+        goog.ui.list.Data.EventType.UPDATE_ROW, this.handleRowUpdate_)
+    .listenOnce(this.data_,
+        goog.ui.list.Data.EventType.UPDATE_ROW, this.examinFirstItemHeight);
+
   this.updateParamsInternal();
 
   /**
@@ -198,12 +217,6 @@ goog.ui.List.prototype.enterDocument = function() {
   this.bottomMargin = new goog.ui.List.Margin_(this.bottomMarginEl);
 
   eh.listen(element, goog.events.EventType.SCROLL, this.redraw)
-    .listen(this.data_,
-        goog.ui.list.Data.EventType.UPDATE_TOTAL, this.handleTotalUpdate_)
-    .listen(this.data_,
-        goog.ui.list.Data.EventType.UPDATE_ROW, this.handleRowUpdate_)
-    .listenOnce(this.data_,
-        goog.ui.list.Data.EventType.UPDATE_ROW, this.examinFirstItemHeight)
     .listen(this.getContentElement(),
         goog.events.EventType.CLICK, this.handleClick);
 

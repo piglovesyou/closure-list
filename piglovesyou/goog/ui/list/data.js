@@ -324,7 +324,7 @@ goog.ui.list.Data.prototype.collect = function(from, count) {
           }
         }
 
-        var items = goog.getObjectByName(me.objectNameRowsInJson_, json);
+        var items = goog.getObjectByName(me.objectNameRowsInJson_, json) || [];
         if (!goog.array.isEmpty(items)) {
           goog.iter.reduce(goog.iter.range(partialFrom,
               partialFrom + partialCount), function(i, rowIndex) {
