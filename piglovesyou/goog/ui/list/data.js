@@ -12,7 +12,7 @@ goog.require('goog.result.SimpleResult');
 
 
 /**
- * @param {string} url .
+ * @param {string|goog.Uri} url .
  * @param {number=} opt_totalRowCount .
  * @param {boolean=} opt_keepTotalUptodate .
  * @param {goog.net.XhrManager=} opt_xhrManager .
@@ -25,10 +25,9 @@ goog.ui.list.Data = function(url,
   goog.base(this);
 
   /**
-   * @type {string}
-   * @private
+   * @type {goog.Uri}
    */
-  this.url_ = url;
+  this.url = goog.Uri.parse(url);
 
   /**
    * @private
@@ -363,7 +362,7 @@ goog.ui.list.Data.prototype.getRowByIndex = function(index) {
  * @suppress {underscore}
  */
 goog.ui.list.Data.prototype.buildUrl = function(from, count) {
-  var url = goog.Uri.parse(this.url_);
+  var url = this.url.clone();
   url.setParameterValue(this.offsetParamKey_, from);
   url.setParameterValue(this.countParamKey_, count);
   return url.toString();
