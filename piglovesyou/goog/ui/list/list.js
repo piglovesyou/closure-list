@@ -84,6 +84,7 @@ goog.exportSymbol('goog.ui.List', goog.ui.List);
  * @enum {string}
  */
 goog.ui.list.EventType = {
+  // TODO: rename it to CLICKITEM
   CLICKROW: 'clickrow',
   UPDATE_TOTAL: 'updatetotal'
 };
@@ -168,7 +169,6 @@ goog.ui.List.prototype.decorateInternal = function(element) {
 /** @inheritDoc */
 goog.ui.List.prototype.createDom = function() {
   var dh = this.getDomHelper();
-  // TODO: topMarginEl & bottomMarginEl
   var element = dh.createDom('div', 'goog-list',
     this.topMarginEl = dh.createDom('div', 'goog-list-topmargin'),
     this.contentEl = dh.createDom('div', 'goog-list-container'),
@@ -215,8 +215,6 @@ goog.ui.List.prototype.updateVirualSizing = function() {
 
 /** @inheritDoc */
 goog.ui.List.prototype.enterDocument = function() {
-  goog.asserts.assert(this.data_,
-      'You should set data before "enterDocument".');
   goog.base(this, 'enterDocument');
   var eh = this.getHandler();
   var element = this.getElement();
@@ -231,7 +229,9 @@ goog.ui.List.prototype.enterDocument = function() {
 
   this.installStylesheet_();
 
-  this.redraw();
+  if (this.data_) {
+    this.redraw();
+  } 
 };
 
 
