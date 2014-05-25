@@ -78,10 +78,7 @@ goog.ui.list.Data = function(url,
   dm.addDataSource(this.root_);
 
   // Monitor a ds a list.Data belongs to.
-  dm.addListener(goog.bind(this.handleTotalChanged, this),
-      '$' + this.getId() + '/total');
-  dm.addListener(goog.bind(this.handleRowChanged, this),
-      '$' + this.getId() + '/rows/...');
+  this.attachListeners_(true);
 };
 goog.inherits(goog.ui.list.Data, goog.events.EventTarget);
 
@@ -187,6 +184,29 @@ goog.ui.list.Data.prototype.objectNameTotalInJson_ = 'total';
 goog.ui.list.Data.prototype.getObjectNameTotalInJson = function() {
   return this.objectNameTotalInJson_;
 };
+
+
+/**
+ * @private
+ * @param {boolean} attach .
+ */
+goog.ui.list.Data.prototype.attachListeners_ = function(attach) {
+  var dm = goog.ds.DataManager.getInstance();
+  var totalListener = this.boundTotalListener ||
+      (this.boundTotalListener = goog.bind(this.handleTotalChanged, this));
+  var rowsListener = this.boundRowsListener ||
+      (this.boundRowsListener = goog.bind(this.handleRowChanged, this));
+  var totalDataPath = '$' + this.getId() + '/total';
+  var rowsDataPath = '$' + this.getId() + '/rows/...';
+
+  if (attach) {
+    dm.addListener(totalListener, totalDataPath);
+    dm.addListener(rowsListener, rowsDataPath);
+  } else {
+    dm.removeListeners(totalListener, totalDataPath);
+    dm.removeListeners(rowsListener, rowsDataPath);
+  }
+}
 
 
 /**
@@ -371,10 +391,13 @@ goog.ui.list.Data.prototype.buildUrl = function(from, count) {
 
 /** @inheritDoc */
 goog.ui.list.Data.prototype.disposeInternal = function() {
+  this.attachListeners_(false);
   goog.ds.DataManager.getInstance().get().removeNode('$' + this.getId());
   this.root_ = null;
   this.total_ = null;
   this.rows_ = null;
+  this.boundTotalListener = null;
+  this.boundRowsListener = null;
   goog.base(this, 'disposeInternal');
 };
 
