@@ -330,6 +330,7 @@ goog.ui.list.Data.prototype.collect = function(from, count) {
       this.xhr_.send(url, url,
           undefined, undefined, undefined, undefined, function(e) {
 
+        if (me.isDisposed()) return;
         me.onFly_ = null;
         if (!e.target.isSuccess()) return;
 
