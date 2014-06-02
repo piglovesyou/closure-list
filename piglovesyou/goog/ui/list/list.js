@@ -14,7 +14,6 @@ goog.require('goog.Uri');
 goog.require('goog.array');
 goog.require('goog.async.Delay');
 goog.require('goog.ds.DataManager');
-goog.require('goog.ds.FastDataNode');
 goog.require('goog.ds.JsDataSource');
 goog.require('goog.math.Range');
 goog.require('goog.net.XhrManager');
@@ -88,10 +87,6 @@ goog.ui.list.EventType = {
   CLICKROW: 'clickrow',
   UPDATE_TOTAL: 'updatetotal'
 };
-
-
-/** @type {string} */
-goog.ui.list.RowNodeNamePrefix = goog.ui.list.Data.RowNodeNamePrefix;
 
 
 /**
@@ -315,7 +310,7 @@ goog.ui.List.prototype.findRowFromEventTarget = function(et) {
 goog.ui.List.prototype.handleRowUpdate_ = function(e) {
   var item = this.getItemByIndex(/**@type{number}*/(e.index));
   // There can be none for some reasons.
-  if (item) item.renderContent(/**@type{goog.ui.list.Data.RowNode}*/(e.row));
+  if (item) item.renderContent(/**@type {goog.ds.DataNode} */(e.row));
 };
 
 
@@ -552,7 +547,7 @@ goog.ui.List.Item.prototype.createDom = function() {
 
 
 /**
- * @param {goog.ds.FastDataNode} data .
+ * @param {goog.ds.DataNode} data .
  */
 goog.ui.List.Item.prototype.renderContent = function(data) {
   this.getElement().innerHTML = this.renderer_(data);

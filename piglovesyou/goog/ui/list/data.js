@@ -278,7 +278,7 @@ goog.ui.list.Data.prototype.getTotal = function() {
  */
 goog.ui.list.Data.prototype.handleRowChanged = function(path) {
   var expr = goog.ds.Expr.create(path);
-  var index = goog.ui.list.Data.SortedNodeList.getKeyAsNumber(expr.getLast());
+  var index = goog.ui.list.Data.SortedNodeList.getKeyAsNumber(/** @type {!string} */(expr.getLast()));
   var node = expr.getNode();
   goog.asserts.assert(node);
   this.dispatchEvent({
@@ -394,7 +394,7 @@ goog.ui.list.Data.prototype.buildUrl = function(from, count) {
 
 
 /**
- * @param {number} indexes .
+ * @param {Array.<number>} indexes .
  */
 goog.ui.list.Data.prototype.asSelected = function (indexes) {
   goog.array.forEach(this.selectedIndexes_, function (i) {
@@ -440,6 +440,12 @@ goog.ui.list.Data.SortedNodeList = function(name, compareFn, parent) {
 goog.inherits(goog.ui.list.Data.SortedNodeList, goog.ds.SortedNodeList);
 
 
+/**
+ * @type {string}
+ */
+goog.ui.list.Data.SortedNodeList.SelectedKey = 'isSelected';
+
+
 /** @inheritDoc */
 goog.ui.list.Data.SortedNodeList.prototype.add = function(node) {
   goog.base(this, 'add', node);
@@ -449,7 +455,7 @@ goog.ui.list.Data.SortedNodeList.prototype.add = function(node) {
 
 /**
  * @private
- * @param {goog.ds.FastDataNode} node .
+ * @param {goog.ds.DataNode} node .
  */
 goog.ui.list.Data.SortedNodeList.prototype.dispatchDataChange_ = function(node) {
   var dm = goog.ds.DataManager.getInstance();
@@ -466,14 +472,14 @@ goog.ui.list.Data.SortedNodeList.prototype.dispatchDataChange_ = function(node) 
 goog.ui.list.Data.SortedNodeList.prototype.asSelected = function(index, select) {
   var node = this.get(index.toString());
   // Is is offensive to use "isSelected" namespace?
-  if (!node || !!node['isSelected'] == select) return;
-  node['isSelected'] = select;
+  if (!node || !!node[goog.ui.list.Data.SortedNodeList.SelectedKey] == select) return;
+  node[goog.ui.list.Data.SortedNodeList.SelectedKey] = select;
   this.setNode(index.toString(), node);
 };
 
 
 /** @inheritDoc */
-goog.ds.SortedNodeList.prototype.setNode = function(name, node) {
+goog.ui.list.Data.SortedNodeList.prototype.setNode = function(name, node) {
   var len = this.getCount();
   goog.base(this, 'setNode', name, node);
   if (node == null) return;
