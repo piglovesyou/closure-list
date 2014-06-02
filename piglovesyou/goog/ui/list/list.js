@@ -281,8 +281,10 @@ goog.ui.List.prototype.setItemHeight_ = function(h) {
 goog.ui.List.prototype.handleClick = function(e) {
   var item = this.findRowFromEventTarget(/**@type{Element}*/(e.target));
   if (item) {
+    var index = item.getIndex();
+    this.data_.asSelected([index]);
     item.dispatchEvent(new goog.ui.List.ClickItemEvent(
-        this.data_.getRowByIndex(item.getIndex()), item));
+        this.data_.getRowByIndex(index), item));
   }
 };
 

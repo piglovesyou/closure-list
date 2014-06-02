@@ -42,6 +42,11 @@ goog.ui.list.Data = function(url,
    */
   this.xhr_ = opt_xhrManager || new goog.net.XhrManager;
 
+  /**
+   * @private
+   */
+  this.selectedIndexes_ = [];
+
   var dm = goog.ds.DataManager.getInstance();
 
   /**
@@ -388,6 +393,24 @@ goog.ui.list.Data.prototype.buildUrl = function(from, count) {
 };
 
 
+/**
+ * @param {number} indexes .
+ */
+goog.ui.list.Data.prototype.asSelected = function (indexes) {
+  goog.array.forEach(this.selectedIndexes_, function (i) {
+    if (!goog.array.contains(indexes, i)) {
+      this.rows_.asSelected(i, false);
+    }
+  }, this);
+  goog.array.forEach(indexes, function (i) {
+    if (!goog.array.contains(this.selectedIndexes_, i)) {
+      this.rows_.asSelected(i, true);
+    }
+  }, this);
+  this.selectedIndexes_ = indexes;
+};
+
+
 /** @inheritDoc */
 goog.ui.list.Data.prototype.disposeInternal = function() {
   this.attachListeners_(false);
@@ -420,11 +443,59 @@ goog.inherits(goog.ui.list.Data.SortedNodeList, goog.ds.SortedNodeList);
 /** @inheritDoc */
 goog.ui.list.Data.SortedNodeList.prototype.add = function(node) {
   goog.base(this, 'add', node);
+  this.dispatchDataChange_(node);
+};
+
+
+/**
+ * @private
+ * @param {goog.ds.FastDataNode} node .
+ */
+goog.ui.list.Data.SortedNodeList.prototype.dispatchDataChange_ = function(node) {
   var dm = goog.ds.DataManager.getInstance();
   dm.fireDataChange(this.getDataPath() + goog.ds.STR_PATH_SEPARATOR + '[' +
       node.getDataName() +
   ']');
 };
+
+
+/**
+ * @param {number} index .
+ * @param {boolean} select .
+ */
+goog.ui.list.Data.SortedNodeList.prototype.asSelected = function(index, select) {
+  var node = this.get(index.toString());
+  // Is is offensive to use "isSelected" namespace?
+  if (!node || !!node['isSelected'] == select) return;
+  node['isSelected'] = select;
+  this.setNode(index.toString(), node);
+};
+
+
+/** @inheritDoc */
+goog.ds.SortedNodeList.prototype.setNode = function(name, node) {
+  var len = this.getCount();
+  goog.base(this, 'setNode', name, node);
+  if (node == null) return;
+  if (len != this.getCount()) {
+    // Node was added.
+  } else {
+    // Node was replaced so we want "fireDataChange()".
+    this.dispatchDataChange_(node);
+  }
+};
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 /**
