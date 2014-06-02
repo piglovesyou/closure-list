@@ -92,10 +92,6 @@ goog.ui.list.Data.EventType = {
 };
 
 
-/** @type {string} */
-goog.ui.list.Data.RowNodeNamePrefix = 'r';
-
-
 /**
  * @type {?goog.ds.FastDataNode}
  */
@@ -308,7 +304,7 @@ goog.ui.list.Data.prototype.collect = function(from, count) {
   var result = new goog.result.SimpleResult();
 
   if (!goog.iter.every(iter, function(count) {
-    var row = me.rows_.get(goog.ui.list.Data.RowNodeNamePrefix + count);
+    var row = me.rows_.get(count.toString());
     if (row) {
       collected.push(row);
       return true;
@@ -351,7 +347,7 @@ goog.ui.list.Data.prototype.collect = function(from, count) {
             var row = items[i];
             if (row) {
               var node = new goog.ui.list.Data.RowNode(rowIndex, row,
-                  goog.ui.list.Data.RowNodeNamePrefix + rowIndex, me.rows_);
+                  rowIndex.toString(), me.rows_);
               me.rows_.add(node);
               collected.push(node);
             }
@@ -371,7 +367,7 @@ goog.ui.list.Data.prototype.collect = function(from, count) {
  * @return {?goog.ds.DataNode} .
  */
 goog.ui.list.Data.prototype.getRowByIndex = function(index) {
-  return this.rows_.get(goog.ui.list.Data.RowNodeNamePrefix + index);
+  return this.rows_.get(index.toString());
 };
 
 
@@ -425,7 +421,7 @@ goog.ui.list.Data.SortedNodeList.prototype.add = function(node) {
   goog.base(this, 'add', node);
   var dm = goog.ds.DataManager.getInstance();
   dm.fireDataChange(this.getDataPath() + goog.ds.STR_PATH_SEPARATOR + '[' +
-      node.getDataName().slice(goog.ui.list.Data.RowNodeNamePrefix.length) +
+      node.getDataName() +
   ']');
 };
 
@@ -453,7 +449,7 @@ goog.ui.list.Data.SortedNodeList.prototype.getDataPath = function() {
 goog.ui.list.Data.SortedNodeList.prototype.getChildNode = function(key) {
   var index = this.getKeyAsNumber(key);
   if (index >= 0) {
-    return this.get(goog.ui.list.Data.RowNodeNamePrefix + index);
+    return this.get(index.toString());
   }
   return null;
 };
