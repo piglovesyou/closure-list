@@ -272,7 +272,8 @@ goog.ui.list.Data.prototype.getTotal = function() {
  * @param {string} path .
  */
 goog.ui.list.Data.prototype.handleRowChanged = function(path) {
-  var node = goog.ds.Expr.create(path).getNode();
+  var expr = goog.ds.Expr.create(path);
+  var node = expr.getNode();
   goog.asserts.assert(node);
   this.dispatchEvent({
     type: goog.ui.list.Data.EventType.UPDATE_ROW,
@@ -401,7 +402,6 @@ goog.ui.list.Data.prototype.disposeInternal = function() {
 
 
 /**
- * We want sortedNodeList to have a name.
  * @param {string} name .
  * @param {Function} compareFn .
  * @param {goog.ds.DataNode} parent .
@@ -447,7 +447,7 @@ goog.ui.list.Data.SortedNodeList.prototype.getDataPath = function() {
  * @return {goog.ds.DataNode} .
  */
 goog.ui.list.Data.SortedNodeList.prototype.getChildNode = function(key) {
-  var index = this.getKeyAsNumber(key);
+  var index = goog.ui.list.Data.SortedNodeList.getKeyAsNumber(key);
   if (index >= 0) {
     return this.get(index.toString());
   }
@@ -460,7 +460,7 @@ goog.ui.list.Data.SortedNodeList.prototype.getChildNode = function(key) {
  * @param {string} key .
  * @return {?number} .
  */
-goog.ui.list.Data.SortedNodeList.prototype.getKeyAsNumber = function(key) {
+goog.ui.list.Data.SortedNodeList.getKeyAsNumber = function(key) {
   if (key.charAt(0) == '[' && key.charAt(key.length - 1) == ']') {
     return Number(key.substring(1, key.length - 1));
   } else {
