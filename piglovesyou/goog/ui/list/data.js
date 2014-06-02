@@ -273,12 +273,13 @@ goog.ui.list.Data.prototype.getTotal = function() {
  */
 goog.ui.list.Data.prototype.handleRowChanged = function(path) {
   var expr = goog.ds.Expr.create(path);
+  var index = goog.ui.list.Data.SortedNodeList.getKeyAsNumber(expr.getLast());
   var node = expr.getNode();
   goog.asserts.assert(node);
   this.dispatchEvent({
     type: goog.ui.list.Data.EventType.UPDATE_ROW,
     row: node,
-    index: node.getIndex()
+    index: index
   });
 };
 
@@ -347,7 +348,7 @@ goog.ui.list.Data.prototype.collect = function(from, count) {
               partialFrom + partialCount), function(i, rowIndex) {
             var row = items[i];
             if (row) {
-              var node = new goog.ui.list.Data.RowNode(rowIndex, row,
+              var node = new goog.ds.FastDataNode(row,
                   rowIndex.toString(), me.rows_);
               me.rows_.add(node);
               collected.push(node);
@@ -484,33 +485,6 @@ goog.ui.list.Data.SortedNodeList.prototype.getDataName = function() {
   return this.name_;
 };
 
-
-/**
- * @param {number} index .
- * @param {Object} root JSON-like object to initialize data node from.
- * @param {string} dataName Name of this data node.
- * @param {goog.ds.DataNode=} opt_parent Parent of this data node.
- * @extends {goog.ds.FastDataNode}
- * @constructor
- */
-goog.ui.list.Data.RowNode = function(index, root, dataName, opt_parent) {
-  goog.base(this, root, dataName, opt_parent);
-
-  /**
-   * @type {number}
-   * @private
-   */
-  this.index_ = index;
-};
-goog.inherits(goog.ui.list.Data.RowNode, goog.ds.FastDataNode);
-
-
-/**
- * @return {number}
- */
-goog.ui.list.Data.RowNode.prototype.getIndex = function() {
-  return this.index_;
-};
 
 // // Test.
 // var data = new goog.ui.list.Data('/api');

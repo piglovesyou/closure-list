@@ -419,10 +419,10 @@ goog.ui.List.prototype.redraw = function() {
 
   // We promise rows' data before append DOMs because we want
   // minimum manipulation of the DOM tree.
+  var from = range.start * this.rowCountPerPage;
   goog.array.forEach(this.data_.collect(
-      range.start * this.rowCountPerPage,
-      this.getChildCount()), function(node) {
-    var item = this.getItemByIndex(node.getIndex());
+      from, this.getChildCount()), function(node, i) {
+    var item = this.getItemByIndex(from + i);
     // There can be none for some reasons.
     if (item) item.renderContent(node);
   }, this);
