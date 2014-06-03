@@ -154,14 +154,6 @@ goog.ui.List.prototype.updateParamsInternal = function() {
 
 
 /** @inheritDoc */
-goog.ui.List.prototype.decorateInternal = function(element) {
-  goog.base(this, 'decorateInternal', element);
-
-  this.elementHeight = goog.style.getContentBoxSize(element).height;
-};
-
-
-/** @inheritDoc */
 goog.ui.List.prototype.createDom = function() {
   var dh = this.getDomHelper();
   var element = dh.createDom('div', 'goog-list',
@@ -169,7 +161,6 @@ goog.ui.List.prototype.createDom = function() {
     this.contentEl = dh.createDom('div', 'goog-list-container'),
     this.bottomMarginEl = dh.createDom('div', 'goog-list-bottommargin'));
   this.setElementInternal(element);
-  this.elementHeight = goog.style.getContentBoxSize(element).height;
 };
 
 
@@ -213,6 +204,8 @@ goog.ui.List.prototype.enterDocument = function() {
   goog.base(this, 'enterDocument');
   var eh = this.getHandler();
   var element = this.getElement();
+
+  this.elementHeight = goog.style.getContentBoxSize(element).height;
 
   goog.asserts.assert(this.topMarginEl && this.bottomMarginEl);
   this.topMargin = new goog.ui.List.Margin_(this.topMarginEl);
