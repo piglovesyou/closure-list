@@ -111,7 +111,7 @@ goog.ui.List.prototype.setData = function(data) {
   this.dataHandler_ = new goog.events.EventHandler(this);
   this.dataHandler_
     .listen(this.data_,
-        goog.ui.list.Data.EventType.UPDATE_TOTAL, this.handleTotalUpdate_)
+        goog.ui.list.Data.EventType.UPDATE_TOTAL, this.handleTotalUpdate)
     .listen(this.data_,
         goog.ui.list.Data.EventType.UPDATE_ROW, this.handleRowUpdate_)
     .listenOnce(this.data_,
@@ -326,10 +326,10 @@ goog.ui.List.prototype.getItemByIndex = function(index) {
 
 
 /**
- * @private
+ * @protected
  * @param {goog.events.Event} e .
  */
-goog.ui.List.prototype.handleTotalUpdate_ = function(e) {
+goog.ui.List.prototype.handleTotalUpdate = function(e) {
   this.updateParamsInternal();
   this.updateVirualSizing();
 
