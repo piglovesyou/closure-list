@@ -68,15 +68,9 @@ goog.ui.list.Data = function(url,
 
   /**
    * @private
-   * @type {goog.ui.list.Data.SortedNodeList}
+   * @type {goog.ui.list.Data.BasicNodeList}
    */
-  this.rows_ =
-      new goog.ui.list.Data.SortedNodeList('rows', function(newone, oldone) {
-    var newNodeName = newone.getDataName();
-    var oldNodeName = oldone.getDataName();
-    return newNodeName < oldNodeName ? -1 :
-           newNodeName > oldNodeName ? 1 : 0;
-  }, this.root_);
+  this.rows_ = new goog.ui.list.Data.BasicNodeList('rows', this.root_);
   goog.ds.Util.makeReferenceNode(this.rows_, 'rows');
   this.root_.add(this.rows_);
 
@@ -278,7 +272,7 @@ goog.ui.list.Data.prototype.getTotal = function() {
  */
 goog.ui.list.Data.prototype.handleRowChanged = function(path) {
   var expr = goog.ds.Expr.create(path);
-  var index = goog.ui.list.Data.SortedNodeList.getKeyAsNumber(/** @type {!string} */(expr.getLast()));
+  var index = goog.ui.list.Data.BasicNodeList.getKeyAsNumber(/** @type {!string} */(expr.getLast()));
   var node = expr.getNode();
   goog.asserts.assert(node);
   this.dispatchEvent({
@@ -353,9 +347,8 @@ goog.ui.list.Data.prototype.collect = function(from, count) {
               partialFrom + partialCount), function(i, rowIndex) {
             var row = items[i];
             if (row) {
-              var node = new goog.ds.FastDataNode(row,
-                  rowIndex.toString(), me.rows_);
-              me.rows_.add(node);
+              var node = new goog.ds.FastDataNode(row, rowIndex.toString(), me.rows_);
+              me.rows_.addItemAt(node, rowIndex);
               collected.push(node);
             }
             return ++i;
@@ -425,89 +418,78 @@ goog.ui.list.Data.prototype.disposeInternal = function() {
 
 
 
+
 /**
- * @param {string} name .
- * @param {Function} compareFn .
- * @param {goog.ds.DataNode} parent .
- * @extends {goog.ds.SortedNodeList}
  * @constructor
+ * @param {string} name .
+ * @param {goog.ds.DataNode} parent .
+ * @param {Array.<goog.ds.DataNode>=} opt_nodes .
+ * @extends {goog.ds.BasicNodeList}
  */
-goog.ui.list.Data.SortedNodeList = function(name, compareFn, parent) {
-  goog.base(this, compareFn);
+goog.ui.list.Data.BasicNodeList = function(name, parent, opt_nodes) {
+  // this.map_ = { "dataName": node };
+  // this.list_ = [ node ];
+  // this.indexMap_ = { "dataName": index };
+  goog.base(this, opt_nodes);
   this.name_ = name;
   this.parent_ = parent;
 };
-goog.inherits(goog.ui.list.Data.SortedNodeList, goog.ds.SortedNodeList);
+goog.inherits(goog.ui.list.Data.BasicNodeList, goog.ds.BasicNodeList);
 
 
 /**
  * @type {string}
  */
-goog.ui.list.Data.SortedNodeList.SelectedKey = 'isSelected';
+goog.ui.list.Data.BasicNodeList.SelectedKey = 'isSelected';
 
 
-/** @inheritDoc */
-goog.ui.list.Data.SortedNodeList.prototype.add = function(node) {
-  goog.base(this, 'add', node);
-  this.dispatchDataChange_(node);
+/**
+ * @param {goog.ds.DataNode} node .
+ * @param {number} index .
+ */
+goog.ui.list.Data.BasicNodeList.prototype.addItemAt = function(node, index) {
+  this.list_[index] = node;
+  var dataName = node.getDataName();
+  if (dataName) {
+    this.map_[dataName] = node;
+    this.indexMap_[dataName] = index;
+  }
+  this.dispatchDataChange_(node, index);
 };
 
 
 /**
  * @private
  * @param {goog.ds.DataNode} node .
+ * @param {number} index .
  */
-goog.ui.list.Data.SortedNodeList.prototype.dispatchDataChange_ = function(node) {
+goog.ui.list.Data.BasicNodeList.prototype.dispatchDataChange_ = function(node, index) {
   var dm = goog.ds.DataManager.getInstance();
-  dm.fireDataChange(this.getDataPath() + goog.ds.STR_PATH_SEPARATOR + '[' +
-      node.getDataName() +
-  ']');
+  dm.fireDataChange(this.getDataPath() +
+      goog.ds.STR_PATH_SEPARATOR + '[' + index + ']');
 };
 
 
 /**
- * @param {number} index .
- * @param {boolean} select .
+ * @return {goog.ds.DataNode} .
  */
-goog.ui.list.Data.SortedNodeList.prototype.asSelected = function(index, select) {
-  var node = this.get(index.toString());
-  // Is is offensive to use "isSelected" namespace?
-  if (!node || !!node[goog.ui.list.Data.SortedNodeList.SelectedKey] == select) return;
-  node[goog.ui.list.Data.SortedNodeList.SelectedKey] = select;
-  this.setNode(index.toString(), node);
+goog.ui.list.Data.BasicNodeList.prototype.getParent = function() {
+  return this.parent_;
 };
-
-
-/** @inheritDoc */
-goog.ui.list.Data.SortedNodeList.prototype.setNode = function(name, node) {
-  var len = this.getCount();
-  goog.base(this, 'setNode', name, node);
-  if (node == null) return;
-  if (len != this.getCount()) {
-    // Node was added.
-  } else {
-    // Node was replaced so we want "fireDataChange()".
-    this.dispatchDataChange_(node);
-  }
-};
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 /**
  * @return {string} .
  */
-goog.ui.list.Data.SortedNodeList.prototype.getDataPath = function() {
+goog.ui.list.Data.BasicNodeList.prototype.getDataName = function() {
+  return this.name_;
+};
+
+
+/**
+ * @return {string} .
+ */
+goog.ui.list.Data.BasicNodeList.prototype.getDataPath = function() {
   var parentPath = '';
   var myName = this.getDataName();
   if (this.getParent && this.getParent()) {
@@ -515,7 +497,6 @@ goog.ui.list.Data.SortedNodeList.prototype.getDataPath = function() {
         (myName.indexOf(goog.ds.STR_ARRAY_START) != -1 ? '' :
         goog.ds.STR_PATH_SEPARATOR);
   }
-
   return parentPath + myName;
 };
 
@@ -524,8 +505,8 @@ goog.ui.list.Data.SortedNodeList.prototype.getDataPath = function() {
  * @param {string} key .
  * @return {goog.ds.DataNode} .
  */
-goog.ui.list.Data.SortedNodeList.prototype.getChildNode = function(key) {
-  var index = goog.ui.list.Data.SortedNodeList.getKeyAsNumber(key);
+goog.ui.list.Data.BasicNodeList.prototype.getChildNode = function(key) {
+  var index = goog.ui.list.Data.BasicNodeList.getKeyAsNumber(key);
   if (index >= 0) {
     return this.get(index.toString());
   }
@@ -538,7 +519,7 @@ goog.ui.list.Data.SortedNodeList.prototype.getChildNode = function(key) {
  * @param {string} key .
  * @return {?number} .
  */
-goog.ui.list.Data.SortedNodeList.getKeyAsNumber = function(key) {
+goog.ui.list.Data.BasicNodeList.getKeyAsNumber = function(key) {
   if (key.charAt(0) == '[' && key.charAt(key.length - 1) == ']') {
     return Number(key.substring(1, key.length - 1));
   } else {
@@ -548,19 +529,34 @@ goog.ui.list.Data.SortedNodeList.getKeyAsNumber = function(key) {
 
 
 /**
- * @return {goog.ds.DataNode} .
+ * @param {number} index .
+ * @param {boolean} select .
  */
-goog.ui.list.Data.SortedNodeList.prototype.getParent = function() {
-  return this.parent_;
+goog.ui.list.Data.BasicNodeList.prototype.asSelected = function(index, select) {
+  var node = this.get(index.toString());
+  // Is is offensive to use "isSelected" namespace?
+  if (!node || !!node[goog.ui.list.Data.BasicNodeList.SelectedKey] == select) return;
+  node[goog.ui.list.Data.BasicNodeList.SelectedKey] = select;
+  this.setNode(index.toString(), node);
 };
 
 
-/**
- * @return {string} .
- */
-goog.ui.list.Data.SortedNodeList.prototype.getDataName = function() {
-  return this.name_;
+/** @inheritDoc */
+goog.ui.list.Data.BasicNodeList.prototype.setNode = function(name, node) {
+  var len = this.getCount();
+  goog.base(this, 'setNode', name, node);
+  if (node == null) return;
+  if (len != this.getCount()) {
+    // Node was added.
+  } else {
+    // Node was replaced so we want "fireDataChange()".
+    var index = this.indexOf(node.getDataName());
+    goog.asserts.assertNumber(index);
+    this.dispatchDataChange_(node, /** @type {number} */(index));
+  }
 };
+
+
 
 
 // // Test.

@@ -534,8 +534,7 @@ goog.ui.List.Item.prototype.getIndex = function() {
 /** @inheritDoc */
 goog.ui.List.Item.prototype.createDom = function() {
   var dh = this.getDomHelper();
-  this.setElementInternal(dh.createDom('div', {
-  }));
+  this.setElementInternal(dh.createDom('div', 'goog-list-item'));
 };
 
 
