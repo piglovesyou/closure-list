@@ -66,6 +66,7 @@ goog.ui.List = function(rowRenderer, opt_rowCountPerPage, opt_domHelper) {
   /**
    * Map to find an existing item by index.
    * { index: itemRef }
+   * @private
    * @type {Object.<goog.ui.List.Item>}
    */
   this.indexItemMap_ = {};
@@ -73,7 +74,8 @@ goog.ui.List = function(rowRenderer, opt_rowCountPerPage, opt_domHelper) {
   /**
    * Map to find index by item id.
    * { itemId : index }
-   * @type {Object.<goog.ui.List.Item>}
+   * @private
+   * @type {Object.<number>}
    */
   this.idIndexMap_ = {};
 
@@ -331,8 +333,8 @@ goog.ui.List.prototype.getItemByIndex = function(index) {
 
 
 /**
- * @param {number} index .
- * @return {goog.ui.List.Item} .
+ * @param {string} itemId .
+ * @return {number} index .
  */
 goog.ui.List.prototype.getIndexById = function(itemId) {
   return this.idIndexMap_[itemId];
@@ -613,6 +615,7 @@ goog.ui.List.Margin_.prototype.set = function(height) {
 /**
  * @constructor
  * @param {string} id .
+ * @param {Element} element .
  */
 goog.ui.List.StyleSheet = function(id, element) {
 
