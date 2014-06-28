@@ -207,7 +207,7 @@ goog.ui.list.Data.prototype.attachListeners_ = function(attach) {
     dm.removeListeners(totalListener, totalDataPath);
     dm.removeListeners(rowsListener, rowsDataPath);
   }
-}
+};
 
 
 /**
@@ -396,13 +396,13 @@ goog.ui.list.Data.prototype.buildUrl = function(from, count) {
 /**
  * @param {Array.<number>} indexes .
  */
-goog.ui.list.Data.prototype.asSelected = function (indexes) {
-  goog.array.forEach(this.selectedIndexes_, function (i) {
+goog.ui.list.Data.prototype.asSelected = function(indexes) {
+  goog.array.forEach(this.selectedIndexes_, function(i) {
     if (!goog.array.contains(indexes, i)) {
       this.rows_.asSelected(i, false);
     }
   }, this);
-  goog.array.forEach(indexes, function (i) {
+  goog.array.forEach(indexes, function(i) {
     if (!goog.array.contains(this.selectedIndexes_, i)) {
       this.rows_.asSelected(i, true);
     }
