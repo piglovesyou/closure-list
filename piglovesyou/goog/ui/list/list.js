@@ -65,9 +65,17 @@ goog.ui.List = function(rowRenderer, opt_rowCountPerPage, opt_domHelper) {
 
   /**
    * Map to find an existing item by index.
+   * { index: itemRef }
    * @type {Object.<goog.ui.List.Item>}
    */
-  this.indexMap_ = {};
+  this.indexItemMap_ = {};
+
+  /**
+   * Map to find index by item id.
+   * { itemId : index }
+   * @type {Object.<goog.ui.List.Item>}
+   */
+  this.idIndexMap_ = {};
 
   if (rowRenderer.prototype instanceof goog.ui.List.Item) {
     this.itemClassRef_ =
@@ -275,7 +283,7 @@ goog.ui.List.prototype.setItemHeight_ = function(h) {
 goog.ui.List.prototype.handleClick = function(e) {
   var item = this.findRowFromEventTarget(/**@type{Element}*/(e.target));
   if (item) {
-    var index = item.getIndex();
+    var index = this.getIndexById(item.getId());
     this.data_.asSelected([index]);
     item.dispatchEvent(new goog.ui.List.ClickItemEvent(
         this.data_.getRowByIndex(index), item));
@@ -318,7 +326,16 @@ goog.ui.List.prototype.handleRowUpdate_ = function(e) {
  * @return {goog.ui.List.Item} .
  */
 goog.ui.List.prototype.getItemByIndex = function(index) {
-  return this.indexMap_[index];
+  return this.indexItemMap_[index];
+};
+
+
+/**
+ * @param {number} index .
+ * @return {goog.ui.List.Item} .
+ */
+goog.ui.List.prototype.getIndexById = function(itemId) {
+  return this.idIndexMap_[itemId];
 };
 
 
@@ -381,8 +398,12 @@ goog.ui.List.prototype.redraw = function() {
     for (var i = lastRange.start * this.rowCountPerPage;
          i < lastRange.end * this.rowCountPerPage; i++) {
       if (!goog.math.Range.containsPoint(range, Math.floor(i / this.rowCountPerPage))) {
-        this.removeChild(this.indexMap_[i], true);
-        delete this.indexMap_[i];
+        var item = this.indexItemMap_[i];
+        goog.asserts.assert(item);
+        var itemId = item.getId();
+        this.removeChild(item, true);
+        delete this.indexItemMap_[i];
+        delete this.idIndexMap_[itemId];
       }
     }
   }
@@ -453,11 +474,12 @@ goog.ui.List.prototype.createPage = function(index, rowCount) {
   var start = index * this.rowCountPerPage;
   var end = start + rowCount;
   for (var i = start; i < end; i++) {
-    var item = new this.itemClassRef_(i, this.rowRenderer_, dh);
+    var item = new this.itemClassRef_(this.rowRenderer_, dh);
     item.createDom();
     dh.appendChild(page, item.getElement());
     this.addChild(item);
-    this.indexMap_[i] = item;
+    this.indexItemMap_[i] = item;
+    this.idIndexMap_[item.getId()] = i;
   }
   return page;
 };
@@ -498,19 +520,12 @@ goog.inherits(goog.ui.List.ClickItemEvent, goog.events.Event);
 
 /**
  * @constructor
- * @param {number} index .
  * @param {Function=} opt_renderer .
  * @param {goog.dom.DomHelper=} opt_domHelper .
  * @extends {goog.ui.Component}
  */
-goog.ui.List.Item = function(index, opt_renderer, opt_domHelper) {
+goog.ui.List.Item = function(opt_renderer, opt_domHelper) {
   goog.base(this, opt_domHelper);
-
-  /**
-   * @private
-   * @type {number}
-   */
-  this.index_ = index;
 
   /**
    * @private
@@ -518,14 +533,6 @@ goog.ui.List.Item = function(index, opt_renderer, opt_domHelper) {
   this.renderer_ = opt_renderer || goog.nullFunction;
 };
 goog.inherits(goog.ui.List.Item, goog.ui.Component);
-
-
-/**
- * @return {number} .
- */
-goog.ui.List.Item.prototype.getIndex = function() {
-  return this.index_;
-};
 
 
 /** @inheritDoc */
