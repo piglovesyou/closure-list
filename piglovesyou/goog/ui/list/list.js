@@ -63,6 +63,12 @@ goog.ui.List = function(rowRenderer, opt_rowCountPerPage, opt_domHelper) {
    */
   this.rowRenderer_;
 
+  /**
+   * Map to find an existing item by index.
+   * @type {Object.<goog.ui.List.Item>}
+   */
+  this.indexMap_ = {};
+
   if (rowRenderer.prototype instanceof goog.ui.List.Item) {
     this.itemClassRef_ =
         /**@type {function(new:goog.ui.List.Item, ...[*])}*/(rowRenderer);
@@ -312,16 +318,7 @@ goog.ui.List.prototype.handleRowUpdate_ = function(e) {
  * @return {goog.ui.List.Item} .
  */
 goog.ui.List.prototype.getItemByIndex = function(index) {
-  var found;
-  goog.array.find(this.getChildIds(), function(id) {
-    var item = /** @type {goog.ui.List.Item} */(this.getChild(id));
-    if (item.getIndex() == index) {
-      found = item;
-      return true;
-    }
-    return false;
-  }, this);
-  return found;
+  return this.indexMap_[index];
 };
 
 
@@ -380,13 +377,12 @@ goog.ui.List.prototype.redraw = function() {
   if (!lastRange || !goog.math.Range.hasIntersection(range, lastRange)) {
     this.removeChildren(true);
   } else {
-    var c, i = 0;
-    while (c = this.getChildAt(i)) {
-      if (goog.math.Range.containsPoint(range,
-          Math.floor(c.getIndex() / this.rowCountPerPage))) {
-        i++;
-      } else {
-        this.removeChild(c, true);
+    // var c, i = 0;
+    for (var i = lastRange.start * this.rowCountPerPage;
+         i < lastRange.end * this.rowCountPerPage; i++) {
+      if (!goog.math.Range.containsPoint(range, Math.floor(i / this.rowCountPerPage))) {
+        this.removeChild(this.indexMap_[i], true);
+        delete this.indexMap_[i];
       }
     }
   }
@@ -461,6 +457,7 @@ goog.ui.List.prototype.createPage = function(index, rowCount) {
     item.createDom();
     dh.appendChild(page, item.getElement());
     this.addChild(item);
+    this.indexMap_[i] = item;
   }
   return page;
 };
