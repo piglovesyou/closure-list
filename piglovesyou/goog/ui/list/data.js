@@ -347,7 +347,7 @@ goog.ui.list.Data.prototype.collect = function(from, count) {
               partialFrom + partialCount), function(i, rowIndex) {
             var row = items[i];
             if (row) {
-              var node = new goog.ds.FastDataNode(row, rowIndex.toString(), me.rows_);
+              var node = new goog.ds.FastDataNode(row, 'row:' + rowIndex.toString(), me.rows_);
               me.rows_.addItemAt(node, rowIndex);
               collected.push(node);
             }
@@ -367,7 +367,7 @@ goog.ui.list.Data.prototype.collect = function(from, count) {
  * @return {?goog.ds.DataNode} .
  */
 goog.ui.list.Data.prototype.getRowByIndex = function(index) {
-  return this.rows_.get(index.toString());
+  return this.rows_.getByIndex(index);
 };
 
 
@@ -507,8 +507,8 @@ goog.ui.list.Data.BasicNodeList.prototype.getDataPath = function() {
  */
 goog.ui.list.Data.BasicNodeList.prototype.getChildNode = function(key) {
   var index = goog.ui.list.Data.BasicNodeList.getKeyAsNumber(key);
-  if (index >= 0) {
-    return this.get(index.toString());
+  if (goog.isNumber(index) && index >= 0) {
+    return this.getByIndex(index);
   }
   return null;
 };
