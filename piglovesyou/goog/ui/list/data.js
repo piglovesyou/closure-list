@@ -347,8 +347,7 @@ goog.ui.list.Data.prototype.collect = function(from, count) {
               partialFrom + partialCount), function(i, rowIndex) {
             var row = items[i];
             if (row) {
-              var node = new goog.ds.FastDataNode(row, 'row:' + rowIndex.toString(), me.rows_);
-              me.rows_.addItemAt(node, rowIndex);
+              var node = me.addRowAt(row, rowIndex);
               collected.push(node);
             }
             return ++i;
@@ -359,6 +358,32 @@ goog.ui.list.Data.prototype.collect = function(from, count) {
     }
   }
   return collected;
+};
+
+
+/**
+ * @param {Object} rawObject .
+ * @param {number} index .
+ * @return {goog.ds.DataNode} .
+ */
+goog.ui.list.Data.prototype.addRowAt = function(rawObject, index) {
+  var node = new goog.ds.FastDataNode(rawObject,
+      'row:' + index, this.rows_);
+  this.rows_.addAt(node, index);
+  this.dispatchRowChange_(node, index);
+  return node;
+};
+
+
+/**
+ * @private
+ * @param {goog.ds.DataNode} node .
+ * @param {number} index .
+ */
+goog.ui.list.Data.prototype.dispatchRowChange_ = function(node, index) {
+  var dm = goog.ds.DataManager.getInstance();
+  dm.fireDataChange(this.rows_.getDataPath() +
+      goog.ds.STR_PATH_SEPARATOR + '[' + index + ']');
 };
 
 
@@ -447,14 +472,13 @@ goog.ui.list.Data.BasicNodeList.SelectedKey = 'isSelected';
  * @param {goog.ds.DataNode} node .
  * @param {number} index .
  */
-goog.ui.list.Data.BasicNodeList.prototype.addItemAt = function(node, index) {
+goog.ui.list.Data.BasicNodeList.prototype.addAt = function(node, index) {
   this.list_[index] = node;
   var dataName = node.getDataName();
   if (dataName) {
     this.map_[dataName] = node;
     this.indexMap_[dataName] = index;
   }
-  this.dispatchDataChange_(node, index);
 };
 
 
@@ -540,21 +564,6 @@ goog.ui.list.Data.BasicNodeList.prototype.asSelected = function(index, select) {
   this.setNode(index.toString(), node);
 };
 
-
-/** @inheritDoc */
-goog.ui.list.Data.BasicNodeList.prototype.setNode = function(name, node) {
-  var len = this.getCount();
-  goog.base(this, 'setNode', name, node);
-  if (node == null) return;
-  if (len != this.getCount()) {
-    // Node was added.
-  } else {
-    // Node was replaced so we want "fireDataChange()".
-    var index = this.indexOf(node.getDataName());
-    goog.asserts.assertNumber(index);
-    this.dispatchDataChange_(node, /** @type {number} */(index));
-  }
-};
 
 
 
