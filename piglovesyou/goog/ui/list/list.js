@@ -183,7 +183,7 @@ goog.ui.List.prototype.createDom = function() {
 /** @inheritDoc */
 goog.ui.List.prototype.canDecorate = function(element) {
   if (element &&
-      goog.dom.classes.has(element, 'goog-list') &&
+      goog.dom.classlist.contains(element, 'goog-list') &&
       (this.topMarginEl =
           goog.dom.getElementByClass('goog-list-topmargin', element)) &&
       (this.contentEl =
@@ -235,7 +235,7 @@ goog.ui.List.prototype.enterDocument = function() {
 
   if (this.data_) {
     this.redraw();
-  } 
+  }
 };
 
 

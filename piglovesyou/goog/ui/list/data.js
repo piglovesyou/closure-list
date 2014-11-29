@@ -8,7 +8,6 @@ goog.require('goog.ds.SortedNodeList');
 goog.require('goog.events.EventTarget');
 goog.require('goog.labs.net.xhr');
 goog.require('goog.net.XhrManager');
-goog.require('goog.result.SimpleResult');
 
 
 /**
@@ -302,7 +301,6 @@ goog.ui.list.Data.prototype.collect = function(from, count) {
 
   var collected = [];
   var iter = goog.iter.range(from, from + count);
-  var result = new goog.result.SimpleResult();
 
   if (!goog.iter.every(iter, function(count) {
     var row = me.rows_.get(count.toString());
@@ -353,7 +351,6 @@ goog.ui.list.Data.prototype.collect = function(from, count) {
             return ++i;
           }, 0);
         }
-        result.setValue(collected);
       });
     }
   }
